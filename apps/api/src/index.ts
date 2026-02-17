@@ -1,5 +1,7 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import shortLink from "./handlers/shortLink.js";
+import getLink from "./handlers/getLink.js";
 
 const app = new Hono();
 
@@ -7,9 +9,8 @@ app.get("/", (c) => {
   return c.text("Hello Hono!");
 });
 
-app.post("/url", (c) => {
-  return c.text("Create a new short URL");
-});
+app.route("/", getLink);
+app.route("/url", shortLink);
 
 serve(
   {
