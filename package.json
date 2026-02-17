@@ -1,0 +1,11 @@
+{
+  "name": "keep-it-short",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter api dev",
+    "build": "pnpm --filter api build",
+    "start": "pnpm --filter api start"
+  },
+  "devDependencies": {}
+}
