@@ -1,7 +1,7 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-import shortLink from "./handlers/shortLink.js";
-import getLink from "./handlers/getLink.js";
+import shortLink from "./routers/shortLink.js";
+import getLink from "./routers/getLink.js";
 
 const app = new Hono();
 
