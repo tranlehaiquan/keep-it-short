@@ -3,9 +3,9 @@ import { integer, pgTable, varchar, timestamp } from "drizzle-orm/pg-core";
 
 export const shortLinkTable = pgTable("short_links", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  slug: varchar().notNull(),
+  slug: varchar().notNull().unique(),
   url: varchar().notNull(),
-  clickCount: integer(),
+  clickCount: integer().default(0),
   createdAt: timestamp().defaultNow(),
   expiredAt: timestamp().notNull(),
 });

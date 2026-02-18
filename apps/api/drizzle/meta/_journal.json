@@ -8,6 +8,13 @@
       "when": 1771337993107,
       "tag": "0000_fuzzy_magus",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1771390526171,
+      "tag": "0001_charming_nightcrawler",
+      "breakpoints": true
     }
   ]
 }

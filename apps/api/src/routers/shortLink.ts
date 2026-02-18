@@ -1,71 +1,95 @@
-import { sValidator } from "@hono/standard-validator";
+import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import * as z from "zod";
 import { nanoid } from "nanoid";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import db from "../db/index.js";
 import { shortLinkTable, type ShortLink } from "../db/schema.js";
 import redis from "../db/redis-instance.js";
 
 const app = new Hono();
 
-const schema = z.object({
+const createSchema = z.object({
   url: z.url(),
+  expiredAt: z.string().datetime().optional(),
 });
 
-app.post("/url", sValidator("json", schema), async (c) => {
-  const ONE_DAY_TIME = 1000 * 60 * 60 * 24;
-  const { url } = await c.req.json();
-  const slug = nanoid();
-  const expiredAt = Date.now() + ONE_DAY_TIME;
+app.post("/url", zValidator("json", createSchema), async (c) => {
+  const { url, expiredAt: customExpiredAt } = c.req.valid("json");
+
+  const expiredAtDate = customExpiredAt
+    ? new Date(customExpiredAt)
+    : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+  const slug = nanoid(6);
+
   const record = {
     url,
     slug,
-    expiredAt: new Date(expiredAt),
+    expiredAt: expiredAtDate,
+    clickCount: 0,
   };
 
   try {
     await db.insert(shortLinkTable).values(record);
-    redis.set(slug, JSON.stringify(record));
 
-    return c.json(record);
+    const ttlSeconds = Math.floor(
+      (expiredAtDate.getTime() - Date.now()) / 1000,
+    );
+    if (ttlSeconds > 0) {
+      await redis.set(slug, JSON.stringify(record), { EX: ttlSeconds });
+    }
+
+    return c.json(
+      {
+        slug: record.slug,
+        shortUrl: `${new URL(c.req.url).origin}/${record.slug}`,
+        expiredAt: record.expiredAt,
+      },
+      201,
+    );
   } catch (err) {
-    console.log(err);
-    return c.text("Failed create short link", 500);
+    console.error("DB Error:", err);
+    return c.json({ error: "Failed to create short link" }, 500);
   }
 });
 
-const schemaGetLinkBySlug = z.object({
-  slug: z.string().nonempty(),
-});
+app.get("/:slug", async (c) => {
+  const slug = c.req.param("slug");
 
-app.get("/:slug", sValidator("param", schemaGetLinkBySlug), async (c) => {
-  const slug = await c.req.param("slug");
-  const shortLinkCache = await redis.get(slug);
-  let shortLink: ShortLink | undefined = shortLinkCache
-    ? JSON.parse(shortLinkCache)
-    : undefined;
+  const cached = await redis.get(slug);
+  let shortLink: ShortLink | null = cached ? JSON.parse(cached) : null;
 
   if (!shortLink) {
-    [shortLink] = await db
+    const results = await db
       .select()
       .from(shortLinkTable)
-      .where(eq(shortLinkTable.slug, slug));
+      .where(eq(shortLinkTable.slug, slug))
+      .limit(1);
 
-    await redis.set(slug, JSON.stringify(shortLink));
+    shortLink = results[0] || null;
+
+    if (shortLink) {
+      const ttlSeconds = Math.floor(
+        (new Date(shortLink.expiredAt).getTime() - Date.now()) / 1000,
+      );
+      if (ttlSeconds > 0) {
+        await redis.set(slug, JSON.stringify(shortLink), { EX: ttlSeconds });
+      }
+    }
   }
 
-  if (!shortLink) {
-    return c.json({ message: "not found" }, 404);
+  if (!shortLink || new Date(shortLink.expiredAt) < new Date()) {
+    return c.json({ message: "Link not found or expired" }, 404);
   }
 
-  const { url, expiredAt } = shortLink;
+  db.update(shortLinkTable)
+    .set({ clickCount: sql`${shortLinkTable.clickCount} + 1` })
+    .where(eq(shortLinkTable.slug, slug))
+    .execute()
+    .catch((err) => console.error("Analytics error:", err));
 
-  if (new Date(expiredAt) < new Date()) {
-    return c.json({ message: "not found" }, 404);
-  }
-
-  return c.redirect(url);
+  return c.redirect(shortLink.url);
 });
 
 export default app;

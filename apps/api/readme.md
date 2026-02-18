@@ -10,7 +10,7 @@ A high-performance URL shortener built with Node.js. Designed with a skewed read
 
 | Layer     | Choice     | Reason                                                      |
 | --------- | ---------- | ----------------------------------------------------------- |
-| Framework | Fastify    | Faster than Express, built-in JSON schema validation        |
+| Framework | Hono       | Faster than Express, built-in JSON schema validation        |
 | Database  | PostgreSQL | Robust, great support for unique constraints and timestamps |
 | Cache     | Redis      | Sub-millisecond key-value lookups, perfect for slug → url   |
 | Slug      | nanoid     | Simple, collision-resistant random string generation        |
