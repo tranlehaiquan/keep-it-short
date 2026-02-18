@@ -1,3 +1,4 @@
+import type { InferSelectModel } from "drizzle-orm";
 import { integer, pgTable, varchar, timestamp } from "drizzle-orm/pg-core";
 
 export const shortLinkTable = pgTable("short_links", {
@@ -6,5 +7,7 @@ export const shortLinkTable = pgTable("short_links", {
   url: varchar().notNull(),
   clickCount: integer(),
   createdAt: timestamp().defaultNow(),
-  expiredAt: timestamp(),
+  expiredAt: timestamp().notNull(),
 });
+
+export type ShortLink = InferSelectModel<typeof shortLinkTable>;

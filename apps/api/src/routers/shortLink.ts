@@ -4,7 +4,8 @@ import * as z from "zod";
 import { nanoid } from "nanoid";
 import { eq } from "drizzle-orm";
 import db from "../db/index.js";
-import { shortLinkTable } from "../db/schema.js";
+import { shortLinkTable, type ShortLink } from "../db/schema.js";
+import redis from "../db/redis-instance.js";
 
 const app = new Hono();
 
@@ -17,15 +18,17 @@ app.post("/url", sValidator("json", schema), async (c) => {
   const { url } = await c.req.json();
   const slug = nanoid();
   const expiredAt = Date.now() + ONE_DAY_TIME;
-  const values = {
+  const record = {
     url,
     slug,
     expiredAt: new Date(expiredAt),
   };
 
   try {
-    await db.insert(shortLinkTable).values(values);
-    return c.json(values);
+    await db.insert(shortLinkTable).values(record);
+    redis.set(slug, JSON.stringify(record));
+
+    return c.json(record);
   } catch (err) {
     console.log(err);
     return c.text("Failed create short link", 500);
@@ -38,16 +41,29 @@ const schemaGetLinkBySlug = z.object({
 
 app.get("/:slug", sValidator("param", schemaGetLinkBySlug), async (c) => {
   const slug = await c.req.param("slug");
-  const [shortLink] = await db
-    .select()
-    .from(shortLinkTable)
-    .where(eq(shortLinkTable.slug, slug));
+  const shortLinkCache = await redis.get(slug);
+  let shortLink: ShortLink | undefined = shortLinkCache
+    ? JSON.parse(shortLinkCache)
+    : undefined;
+
+  if (!shortLink) {
+    [shortLink] = await db
+      .select()
+      .from(shortLinkTable)
+      .where(eq(shortLinkTable.slug, slug));
+
+    await redis.set(slug, JSON.stringify(shortLink));
+  }
 
   if (!shortLink) {
     return c.json({ message: "not found" }, 404);
   }
 
-  const { url } = shortLink;
+  const { url, expiredAt } = shortLink;
+
+  if (new Date(expiredAt) < new Date()) {
+    return c.json({ message: "not found" }, 404);
+  }
 
   return c.redirect(url);
 });
