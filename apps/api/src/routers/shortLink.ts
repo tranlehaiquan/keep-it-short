@@ -11,7 +11,7 @@ const app = new Hono();
 
 const createSchema = z.object({
   url: z.url(),
-  expiredAt: z.string().datetime().optional(),
+  expiredAt: z.iso.datetime().optional(),
 });
 
 app.post("/url", zValidator("json", createSchema), async (c) => {
@@ -31,7 +31,7 @@ app.post("/url", zValidator("json", createSchema), async (c) => {
   };
 
   try {
-    await db.insert(shortLinkTable).values(record);
+    db.insert(shortLinkTable).values(record);
 
     const ttlSeconds = Math.floor(
       (expiredAtDate.getTime() - Date.now()) / 1000,
@@ -58,29 +58,46 @@ app.get("/:slug", async (c) => {
   const slug = c.req.param("slug");
 
   const cached = await redis.get(slug);
-  let shortLink: ShortLink | null = cached ? JSON.parse(cached) : null;
+
+  if (cached === "NOT_FOUND") {
+    return c.json({ message: "Link not found or expired" }, 404);
+  }
+
+  let shortLink: ShortLink | null = null;
+  if (cached) {
+    try {
+      shortLink = JSON.parse(cached);
+    } catch (e) {
+      console.error("Error parsing cached shortLink:", e);
+      // If cached data is corrupted or invalid JSON, treat as a cache miss
+    }
+  }
 
   if (!shortLink) {
-    const results = await db
+    const [shortLinkFromDB] = await db
       .select()
       .from(shortLinkTable)
       .where(eq(shortLinkTable.slug, slug))
       .limit(1);
 
-    shortLink = results[0] || null;
-
-    if (shortLink) {
+    if (shortLinkFromDB) {
+      shortLink = shortLinkFromDB;
       const ttlSeconds = Math.floor(
         (new Date(shortLink.expiredAt).getTime() - Date.now()) / 1000,
       );
+
       if (ttlSeconds > 0) {
         await redis.set(slug, JSON.stringify(shortLink), { EX: ttlSeconds });
+      } else {
+        // Link found in DB but expired, set negative cache
+        await redis.set(slug, "NOT_FOUND", { EX: 60 });
+        return c.json({ message: "Link not found or expired" }, 404);
       }
+    } else {
+      // Slug not found in DB at all, set negative cache
+      await redis.set(slug, "NOT_FOUND", { EX: 60 });
+      return c.json({ message: "Link not found or expired" }, 404);
     }
-  }
-
-  if (!shortLink || new Date(shortLink.expiredAt) < new Date()) {
-    return c.json({ message: "Link not found or expired" }, 404);
   }
 
   db.update(shortLinkTable)

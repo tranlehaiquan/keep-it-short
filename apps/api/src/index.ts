@@ -7,8 +7,6 @@ const __dirname = path.dirname(__filename);
 
 const numCPUs = Math.min(os.cpus().length, 4);
 
-console.log(__dirname + "/server.js");
-
 cluster.setupPrimary({
   exec: __dirname + "/server.js",
 });
