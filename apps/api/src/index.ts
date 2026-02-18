@@ -1,29 +1,22 @@
-import { serve } from "@hono/node-server";
-import { Hono } from "hono";
-import "./db/redis-instance.js";
-import shortLink from "./routers/shortLink.js";
-import { Layout } from "./components/Layout.js";
-import { Home } from "./components/Home.js";
+import os from "node:os";
+import cluster from "node:cluster";
+import path from "path";
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const app = new Hono();
+const numCPUs = Math.min(os.cpus().length, 4);
 
-app.get("/", (c) => {
-  return c.html(
-    Layout({ 
-      title: "Keep It Short - URL Shortener", 
-      children: Home() 
-    })
-  );
+console.log(__dirname + "/server.js");
+
+cluster.setupPrimary({
+  exec: __dirname + "/server.js",
 });
 
-app.route("/", shortLink);
+for (let i = 0; i < numCPUs; i++) {
+  cluster.fork();
+}
 
-serve(
-  {
-    fetch: app.fetch,
-    port: 3000,
-  },
-  (info) => {
-    console.log(`Server is running on http://localhost:${info.port}`);
-  },
-);
+cluster.on("exit", (worker) => {
+  console.log(`worker ${worker.process.pid} has been killed`);
+});
