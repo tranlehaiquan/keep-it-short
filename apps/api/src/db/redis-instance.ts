@@ -1,7 +1,7 @@
 import { createClient } from "redis";
 
 const client = createClient({
-  password: "redis_secure_password",
+  password: process.env.REDIS_PASSWORD || "redis_secure_password",
 });
 client.on("ready", () => {
   console.log("[redis] standalone ready.");
