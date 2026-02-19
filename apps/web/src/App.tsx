@@ -1,34 +1,82 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from "react"
+import "./App.css"
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [url, setUrl] = useState("")
+  const [shortUrl, setShortUrl] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError("")
+    setShortUrl("")
+
+    try {
+      const response = await fetch("/url", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to shorten URL")
+      }
+
+      setShortUrl(data.shortUrl)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
+    <div className="container">
+      <h1>Keep It Short</h1>
+      <p>Enter a long URL to get a shortened version.</p>
+      
+      <form onSubmit={handleSubmit} className="card">
+        <input
+          type="url"
+          placeholder="https://example.com/very-long-url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          required
+          className="url-input"
+        />
+        <button type="submit" disabled={loading}>
+          {loading ? "Shortening..." : "Shorten"}
         </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+      </form>
+
+      {error && <p className="error">{error}</p>}
+
+      {shortUrl && (
+        <div className="result">
+          <p>Your short URL:</p>
+          <a href={shortUrl} target="_blank" rel="noreferrer">
+            {shortUrl}
+          </a>
+          <div style={{ marginTop: "10px" }}>
+            <button 
+              className="copy-btn"
+              onClick={() => {
+                navigator.clipboard.writeText(shortUrl)
+                alert("Copied to clipboard!")
+              }}
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
