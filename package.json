@@ -3,9 +3,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "pnpm --filter api dev",
-    "build": "pnpm --filter api build",
-    "start": "pnpm --filter api start",
+    "dev": "pnpm -r --filter './apps/*' dev",
+    "build": "pnpm -r --filter './apps/*' build",
+    "start": "pnpm -r --filter './apps/*' start",
     "db:generate": "pnpm --filter api db:generate",
     "db:push": "pnpm --filter api db:push",
     "db:migrate": "pnpm --filter api db:migrate"
@@ -14,5 +14,10 @@
     "@hono/standard-validator": "^0.2.2",
     "@hono/zod-validator": "^0.7.6",
     "zod": "^4.3.6"
+  },
+  "pnpm": {
+    "overrides": {
+      "vite": "^8.0.0-beta.13"
+    }
   }
 }
