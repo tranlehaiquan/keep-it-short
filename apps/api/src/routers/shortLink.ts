@@ -13,7 +13,6 @@ const createSchema = z.object({
 });
 
 const app = new Hono()
-
   .get("/:slug", async (c) => {
     const slug = c.req.param("slug");
 
@@ -68,7 +67,7 @@ const app = new Hono()
 
     return c.redirect(shortLink.url);
   })
-  .post("/url", zValidator("json", createSchema), async (c) => {
+  .post("/api/url", zValidator("json", createSchema), async (c) => {
     const { url, expiredAt: customExpiredAt } = c.req.valid("json");
 
     const expiredAtDate = customExpiredAt

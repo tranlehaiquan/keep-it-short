@@ -18,7 +18,7 @@ function App() {
     setExpiredAt("");
 
     try {
-      const response = await client.url.$post({ json: { url } });
+      const response = await client.api.url.$post({ json: { url } });
       if (!response.ok) {
         throw new Error("Failed to shorten URL");
       }
