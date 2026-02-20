@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import client from "./apis/client";
+import { QRCodeCanvas } from "qrcode.react";
 
 function App() {
   const [url, setUrl] = useState("");
@@ -7,6 +8,7 @@ function App() {
   const [expiredAt, setExpiredAt] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const qrCodeRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +42,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-100 via-white to-gray-50 flex flex-col items-center justify-center p-6 sm:p-12">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-blue-100 via-white to-gray-50 flex flex-col items-center justify-center p-6 sm:p-12">
       <div className="w-full max-w-lg">
         {/* Header Section */}
         <div className="text-center mb-10">
@@ -70,7 +72,7 @@ function App() {
         </div>
 
         {/* Main Card */}
-        <div className="bg-white rounded-3xl shadow-[0_20px_50px_rgba(8,_112,_184,_0.07)] border border-gray-100 p-8 sm:p-10 transition-all hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.12)]">
+        <div className="bg-white rounded-3xl shadow-[0_20px_50px_rgba(8,112,184,0.07)] border border-gray-100 p-8 sm:p-10 transition-all hover:shadow-[0_20px_50px_rgba(8,112,184,0.12)]">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <label
@@ -142,16 +144,16 @@ function App() {
                   value={shortUrl}
                   className="flex-1 bg-transparent border-none text-blue-700 font-bold break-all outline-none text-center sm:text-left"
                 />
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(shortUrl);
-                    alert("Copied to clipboard!");
-                  }}
-                  className="whitespace-nowrap px-6 py-2 bg-white text-blue-600 font-bold rounded-xl shadow-sm hover:shadow-md hover:bg-blue-600 hover:text-white transition-all duration-200"
-                >
-                  Copy Link
-                </button>
               </div>
+
+              {!!shortUrl && (
+                <div
+                  ref={qrCodeRef}
+                  className="mt-4 flex flex-col items-center gap-y-2"
+                >
+                  <QRCodeCanvas value={shortUrl} size={128} />
+                </div>
+              )}
 
               {expiredAt && (
                 <p className="mt-4 text-center text-sm text-gray-500">
