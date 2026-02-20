@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "pnpm -r --filter './apps/*' dev",
     "build": "pnpm -r --filter './apps/*' build",
-    "start": "pnpm -r --filter './apps/*' start",
+    "start": "pnpm --filter api start",
     "db:generate": "pnpm --filter api db:generate",
     "db:push": "pnpm --filter api db:push",
     "db:migrate": "pnpm --filter api db:migrate"
