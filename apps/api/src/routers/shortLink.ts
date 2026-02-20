@@ -31,7 +31,7 @@ app.post("/url", zValidator("json", createSchema), async (c) => {
   };
 
   try {
-    db.insert(shortLinkTable).values(record);
+    await db.insert(shortLinkTable).values(record);
 
     const ttlSeconds = Math.floor(
       (expiredAtDate.getTime() - Date.now()) / 1000,

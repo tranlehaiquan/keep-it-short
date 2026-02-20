@@ -1,20 +1,16 @@
 import { serve } from "@hono/node-server";
+import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import "./db/redis-instance.js";
 import shortLink from "./routers/shortLink.js";
-import { Layout } from "./components/Layout.js";
-import { Home } from "./components/Home.js";
 
 const app = new Hono();
 
-app.get("/", (c) => {
-  return c.html(
-    Layout({
-      title: "Keep It Short - URL Shortener",
-      children: Home(),
-    }),
-  );
-});
+// Serve static assets from the React build
+app.use("/assets/*", serveStatic({ root: "../web/dist" }));
+
+// Serve the React app for the root route
+app.get("/", serveStatic({ path: "../web/dist/index.html" }));
 
 app.route("/", shortLink);
 
