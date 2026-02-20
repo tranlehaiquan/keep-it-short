@@ -8,11 +8,10 @@ const app = new Hono();
 
 // Serve static assets from the React build
 app.use("/assets/*", serveStatic({ root: "../web/dist" }));
-
-// Serve the React app for the root route
 app.get("/", serveStatic({ path: "../web/dist/index.html" }));
 
-app.route("/", shortLink);
+const routes = app.route("/", shortLink);
+export type AppType = typeof routes;
 
 serve(
   {
