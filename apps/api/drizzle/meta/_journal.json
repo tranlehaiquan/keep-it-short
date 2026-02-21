@@ -15,6 +15,13 @@
       "when": 1771390526171,
       "tag": "0001_charming_nightcrawler",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771662949990,
+      "tag": "0002_talented_red_skull",
+      "breakpoints": true
     }
   ]
 }
