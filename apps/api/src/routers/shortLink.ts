@@ -4,7 +4,7 @@ import * as z from "zod";
 import { nanoid } from "nanoid";
 import { eq, sql } from "drizzle-orm";
 import db from "../db/index.js";
-import { shortLinkTable, type ShortLink } from "../db/schema.js";
+import { shortLinkTable, type ShortLink } from "../db/schema/short-link.js";
 import redis from "../db/redis-instance.js";
 
 const createSchema = z.object({
