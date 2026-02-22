@@ -6,13 +6,21 @@ import { eq, sql } from "drizzle-orm";
 import db from "../db/index.js";
 import { shortLinkTable, type ShortLink } from "../db/schema/short-link.js";
 import redis from "../db/redis-instance.js";
+import type { auth } from "../lib/auth.js";
 
 const createSchema = z.object({
   url: z.url(),
   expiredAt: z.iso.datetime().optional(),
 });
 
-const app = new Hono()
+const app = new Hono<{
+  Variables: {
+    user: typeof auth.$Infer.Session.user | null;
+    session: typeof auth.$Infer.Session.session | null;
+  };
+}>();
+
+app
   .get("/:slug", async (c) => {
     const slug = c.req.param("slug");
 
@@ -69,6 +77,8 @@ const app = new Hono()
   })
   .post("/api/url", zValidator("json", createSchema), async (c) => {
     const { url, expiredAt: customExpiredAt } = c.req.valid("json");
+    const session = c.get("session");
+    const user = c.get("user");
 
     const expiredAtDate = customExpiredAt
       ? new Date(customExpiredAt)
@@ -81,7 +91,10 @@ const app = new Hono()
       slug,
       expiredAt: expiredAtDate,
       clickCount: 0,
+      createdBy: user?.id,
     };
+
+    console.log(record);
 
     try {
       await db.insert(shortLinkTable).values(record);
