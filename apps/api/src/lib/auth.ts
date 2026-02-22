@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { openAPI } from "better-auth/plugins";
 import db from "../db/index.js"; // your drizzle instance
+import * as schema from "../db/schema/auth-schema.js"; // Import all your schema tables
 
 const plugins = [];
 
@@ -12,6 +13,7 @@ if (process.env.NODE_ENV === "development") {
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
+    schema,
   }),
   emailAndPassword: {
     enabled: true,

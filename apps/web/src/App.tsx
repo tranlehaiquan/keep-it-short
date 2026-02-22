@@ -2,6 +2,8 @@ import { useState, useRef } from "react";
 import client from "./apis/client";
 import { QRCodeCanvas } from "qrcode.react";
 
+import { authClient } from "./lib/auth-client";
+
 function App() {
   const [url, setUrl] = useState("");
   const [shortUrl, setShortUrl] = useState("");
@@ -41,9 +43,21 @@ function App() {
     });
   };
 
+  const testClickLogin = async () => {
+    const result = await authClient.signUp.email({
+      email: "user@email.com",
+      password: "password",
+      name: "User",
+    });
+
+    console.log("Signup result:", result);
+  };
+
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-blue-100 via-white to-gray-50 flex flex-col items-center justify-center p-6 sm:p-12">
       <div className="w-full max-w-lg">
+        <button onClick={testClickLogin}>Click to test login</button>
+
         {/* Header Section */}
         <div className="text-center mb-10">
           <div className="inline-block p-3 rounded-2xl bg-blue-600 shadow-xl shadow-blue-200 mb-6">

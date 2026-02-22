@@ -74,7 +74,7 @@ const app = new Hono()
       ? new Date(customExpiredAt)
       : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-    const slug = nanoid();
+    const slug = nanoid(6);
 
     const record = {
       url,

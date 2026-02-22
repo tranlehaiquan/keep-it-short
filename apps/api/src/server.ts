@@ -1,12 +1,14 @@
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
-import { cors } from "hono/cors";
 import { auth } from "./lib/auth.js"; // path to your auth file
 import "./db/redis-instance.js";
 import shortLink from "./routers/shortLink.js";
+import { cors } from "hono/cors";
 
 const app = new Hono();
+// enable CORS for any API route (allow all origins)
+app.use("/api/*", cors({ origin: "*" }));
 
 // Serve static assets from the React build
 app.use("/assets/*", serveStatic({ root: "../web/dist" }));
