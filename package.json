@@ -3,8 +3,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "pnpm -r --filter './apps/*' dev",
-    "build": "pnpm -r --filter './apps/*' build",
+    "dev": "turbo dev",
+    "build": "turbo build",
     "start": "pnpm --filter api start",
     "db:generate": "pnpm --filter api db:generate",
     "db:push": "pnpm --filter api db:push",
@@ -19,5 +19,9 @@
     "overrides": {
       "vite": "^8.0.0-beta.13"
     }
-  }
+  },
+  "devDependencies": {
+    "turbo": "^2.8.10"
+  },
+  "packageManager": "pnpm@10.26.1"
 }
