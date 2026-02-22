@@ -8,7 +8,7 @@ import { cors } from "hono/cors";
 
 const app = new Hono();
 // enable CORS for any API route (allow all origins)
-app.use("/api/*", cors({ origin: "*" }));
+app.use("/api/*", cors({ origin: "http://localhost:5173", credentials: true }));
 
 // Serve static assets from the React build
 app.use("/assets/*", serveStatic({ root: "../web/dist" }));

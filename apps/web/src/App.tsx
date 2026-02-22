@@ -3,6 +3,7 @@ import client from "./apis/client";
 import { QRCodeCanvas } from "qrcode.react";
 
 import { authClient } from "./lib/auth-client";
+import { Button } from "./components/ui/button";
 
 function App() {
   const [url, setUrl] = useState("");
@@ -56,7 +57,7 @@ function App() {
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-blue-100 via-white to-gray-50 flex flex-col items-center justify-center p-6 sm:p-12">
       <div className="w-full max-w-lg">
-        <button onClick={testClickLogin}>Click to test login</button>
+        <Button onClick={testClickLogin}>Click to test login</Button>
 
         {/* Header Section */}
         <div className="text-center mb-10">
