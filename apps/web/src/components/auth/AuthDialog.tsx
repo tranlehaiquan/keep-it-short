@@ -1,8 +1,7 @@
 import React from "react";
 import { authClient } from "@/lib/auth-client";
-import type { ControllerRenderProps } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import type { Resolver } from "react-hook-form";
-import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "../ui/button";
 import {
@@ -13,14 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "../ui/form";
+import { Field, FieldLabel, FieldError } from "../ui/field";
 import { Input } from "../ui/input";
 
 export type AuthDialogMode = "login" | "signup";
@@ -131,106 +123,92 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
               : "Enter your details to create an account."}
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-2">
-            {mode === "signup" && (
-              <FormField
-                control={form.control}
-                name="name"
-                render={({
-                  field,
-                }: {
-                  field: ControllerRenderProps<AuthFormValues, "name">;
-                }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Your name"
-                        autoComplete="name"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="grid gap-4 py-2"
+        >
+          {mode === "signup" && (
+            <Controller
+              control={form.control}
+              name="name"
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel>Name</FieldLabel>
+                  <Input
+                    {...field}
+                    placeholder="Your name"
+                    autoComplete="name"
+                    aria-invalid={fieldState.invalid}
+                  />
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
+          )}
+          <Controller
+            control={form.control}
+            name="email"
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel>Email</FieldLabel>
+                <Input
+                  {...field}
+                  type="email"
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  aria-invalid={fieldState.invalid}
+                />
+                <FieldError errors={[fieldState.error]} />
+              </Field>
+            )}
+          />
+          <Controller
+            control={form.control}
+            name="password"
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel>Password</FieldLabel>
+                <Input
+                  {...field}
+                  type="password"
+                  placeholder="••••••••"
+                  autoComplete={
+                    mode === "login" ? "current-password" : "new-password"
+                  }
+                  aria-invalid={fieldState.invalid}
+                />
+                <FieldError errors={[fieldState.error]} />
+                {mode === "signup" && (
+                  <p className="text-muted-foreground text-xs">
+                    At least 8 characters
+                  </p>
                 )}
-              />
+              </Field>
             )}
-            <FormField
-              control={form.control}
-              name="email"
-              render={({
-                field,
-              }: {
-                field: ControllerRenderProps<AuthFormValues, "email">;
-              }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      type="email"
-                      placeholder="you@example.com"
-                      autoComplete="email"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({
-                field,
-              }: {
-                field: ControllerRenderProps<AuthFormValues, "password">;
-              }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      type="password"
-                      placeholder="••••••••"
-                      autoComplete={
-                        mode === "login" ? "current-password" : "new-password"
-                      }
-                    />
-                  </FormControl>
-                  <FormMessage />
-                  {mode === "signup" && (
-                    <p className="text-muted-foreground text-xs">
-                      At least 8 characters
-                    </p>
-                  )}
-                </FormItem>
-              )}
-            />
-            {submitError && (
-              <p className="text-destructive text-sm" role="alert">
-                {submitError}
-              </p>
-            )}
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeDialog}
-                disabled={form.formState.isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting
-                  ? "Please wait…"
-                  : mode === "login"
-                    ? "Log in"
-                    : "Sign up"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+          />
+          {submitError && (
+            <p className="text-destructive text-sm" role="alert">
+              {submitError}
+            </p>
+          )}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={closeDialog}
+              disabled={form.formState.isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting
+                ? "Please wait…"
+                : mode === "login"
+                  ? "Log in"
+                  : "Sign up"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

@@ -7,7 +7,6 @@ import db from "../db/index.js";
 import { shortLinkTable } from "../db/schema/short-link.js";
 import redis from "../db/redis-instance.js";
 import type { auth } from "../lib/auth.js";
-import { hc } from "hono/client";
 
 const createSchema = z.object({
   url: z.url(),
