@@ -1,6 +1,7 @@
 {
   "name": "api",
   "type": "module",
+  "types": "./src/server.ts",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",

@@ -7,6 +7,7 @@ import db from "../db/index.js";
 import { shortLinkTable } from "../db/schema/short-link.js";
 import redis from "../db/redis-instance.js";
 import type { auth } from "../lib/auth.js";
+import { hc } from "hono/client";
 
 const createSchema = z.object({
   url: z.url(),
@@ -18,9 +19,7 @@ const app = new Hono<{
     user: typeof auth.$Infer.Session.user | null;
     session: typeof auth.$Infer.Session.session | null;
   };
-}>();
-
-app
+}>()
   .post("/url", zValidator("json", createSchema), async (c) => {
     const { url, expiredAt: customExpiredAt } = c.req.valid("json");
     const user = c.get("user");
