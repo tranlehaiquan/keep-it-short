@@ -1,14 +1,19 @@
 import { useState, useRef } from "react";
 import client from "./apis/client";
+import { authClient } from "./lib/auth-client";
 import { QRCodeCanvas } from "qrcode.react";
 import Header from "./components/Header";
+import ShortLinkHistory from "./components/ShortLinkHistory";
 
 function App() {
+  const { useSession } = authClient;
+  const { data: session } = useSession();
   const [url, setUrl] = useState("");
   const [shortUrl, setShortUrl] = useState("");
   const [expiredAt, setExpiredAt] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [historyRefetchTrigger, setHistoryRefetchTrigger] = useState(0);
   const qrCodeRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,6 +32,7 @@ function App() {
       const data = await response.json();
       setShortUrl(data.shortUrl);
       setExpiredAt(data.expiredAt);
+      setHistoryRefetchTrigger((n) => n + 1);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -179,6 +185,10 @@ function App() {
               </div>
             )}
           </div>
+
+          {session && (
+            <ShortLinkHistory refetchTrigger={historyRefetchTrigger} />
+          )}
 
           {/* Footer */}
           <p className="mt-12 text-center text-gray-400 text-sm font-medium">

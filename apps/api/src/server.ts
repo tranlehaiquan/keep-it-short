@@ -3,7 +3,8 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { auth } from "./lib/auth.js"; // path to your auth file
 import "./db/redis-instance.js";
-import shortLink from "./routers/shortLink.js";
+import shortLink from "./routers/shortLink";
+import getShortLink from "./routers/getShortLink";
 import { cors } from "hono/cors";
 
 const app = new Hono<{
@@ -35,8 +36,8 @@ app.use("*", async (c, next) => {
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
-const routes = app.route("/", shortLink);
-export type AppType = typeof routes;
+const route = app.route("/", getShortLink).route("/api", shortLink);
+export type AppType = typeof route;
 
 serve(
   {
