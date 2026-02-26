@@ -39,7 +39,7 @@ const authFormResolver: Resolver<AuthFormValues> = async (values) => {
       Object.entries(errors).map(([key, msgs]) => [
         key,
         { type: "validation", message: msgs?.[0] ?? "Invalid value" },
-      ])
+      ]),
     ) as Record<keyof AuthFormValues, { type: string; message: string }>,
   };
 };
@@ -191,7 +191,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
               {submitError}
             </p>
           )}
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2">
             <Button
               type="button"
               variant="outline"
