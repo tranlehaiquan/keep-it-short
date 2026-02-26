@@ -1,7 +1,6 @@
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
-import { cors } from "hono/cors";
 import { auth } from "./lib/auth.js"; // path to your auth file
 import "./db/redis-instance.js";
 import shortLink from "./routers/shortLink.js";
