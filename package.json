@@ -13,7 +13,7 @@
   "dependencies": {
     "@hono/standard-validator": "^0.2.2",
     "@hono/zod-validator": "^0.7.6",
-    "zod": "^4.3.6"
+    "zod": "^4.4.3"
   },
   "pnpm": {
     "overrides": {
@@ -21,7 +21,7 @@
     }
   },
   "devDependencies": {
-    "turbo": "^2.8.21"
+    "turbo": "^2.9.14"
   },
-  "packageManager": "pnpm@10.26.1"
+  "packageManager": "pnpm@11.1.2+sha512.415a1cc25974731e75455c1468371be74c5aa5fb7621b50d4056d222451609f11412f23fd602e6169f1e060466641f798597e1be961a10688836a67b16569499"
 }
