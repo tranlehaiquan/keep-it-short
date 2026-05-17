@@ -2,86 +2,42 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import * as z from "zod";
 import { nanoid } from "nanoid";
-import { eq, sql } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import db from "../db/index.js";
-import { shortLinkTable, type ShortLink } from "../db/schema/short-link.js";
+import { shortLinkTable } from "../db/schema/short-link.js";
 import redis from "../db/redis-instance.js";
+import type { auth } from "../lib/auth.js";
 
 const createSchema = z.object({
   url: z.url(),
   expiredAt: z.iso.datetime().optional(),
 });
 
-const app = new Hono()
-  .get("/:slug", async (c) => {
-    const slug = c.req.param("slug");
-
-    const cached = await redis.get(slug);
-
-    if (cached === "NOT_FOUND") {
-      return c.json({ message: "Link not found or expired" }, 404);
-    }
-
-    let shortLink: ShortLink | null = null;
-    if (cached) {
-      try {
-        shortLink = JSON.parse(cached);
-      } catch (e) {
-        console.error("Error parsing cached shortLink:", e);
-        // If cached data is corrupted or invalid JSON, treat as a cache miss
-      }
-    }
-
-    if (!shortLink) {
-      const [shortLinkFromDB] = await db
-        .select()
-        .from(shortLinkTable)
-        .where(eq(shortLinkTable.slug, slug))
-        .limit(1);
-
-      if (shortLinkFromDB) {
-        shortLink = shortLinkFromDB;
-        const ttlSeconds = Math.floor(
-          (new Date(shortLink.expiredAt).getTime() - Date.now()) / 1000,
-        );
-
-        if (ttlSeconds > 0) {
-          await redis.set(slug, JSON.stringify(shortLink), { EX: ttlSeconds });
-        } else {
-          // Link found in DB but expired, set negative cache
-          await redis.set(slug, "NOT_FOUND", { EX: 60 });
-          return c.json({ message: "Link not found or expired" }, 404);
-        }
-      } else {
-        // Slug not found in DB at all, set negative cache
-        await redis.set(slug, "NOT_FOUND", { EX: 60 });
-        return c.json({ message: "Link not found or expired" }, 404);
-      }
-    }
-
-    db.update(shortLinkTable)
-      .set({ clickCount: sql`${shortLinkTable.clickCount} + 1` })
-      .where(eq(shortLinkTable.slug, slug))
-      .execute()
-      .catch((err) => console.error("Analytics error:", err));
-
-    return c.redirect(shortLink.url);
-  })
-  .post("/api/url", zValidator("json", createSchema), async (c) => {
+const app = new Hono<{
+  Variables: {
+    user: typeof auth.$Infer.Session.user | null;
+    session: typeof auth.$Infer.Session.session | null;
+  };
+}>()
+  .post("/url", zValidator("json", createSchema), async (c) => {
     const { url, expiredAt: customExpiredAt } = c.req.valid("json");
+    const user = c.get("user");
 
     const expiredAtDate = customExpiredAt
       ? new Date(customExpiredAt)
       : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-    const slug = nanoid();
+    const slug = nanoid(6);
 
     const record = {
       url,
       slug,
       expiredAt: expiredAtDate,
       clickCount: 0,
+      createdBy: user?.id,
     };
+
+    console.log(record);
 
     try {
       await db.insert(shortLinkTable).values(record);
@@ -105,6 +61,21 @@ const app = new Hono()
       console.error("DB Error:", err);
       return c.json({ error: "Failed to create short link" }, 500);
     }
+  })
+  .get("/url/history", async (c) => {
+    const user = c.get("user");
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const history = await db
+      .select()
+      .from(shortLinkTable)
+      .where(eq(shortLinkTable.createdBy, user.id))
+      .orderBy(desc(shortLinkTable.createdAt));
+
+    return c.json({ items: history });
   });
 
 export default app;

@@ -1,0 +1,2 @@
+ALTER TABLE "short_links" ADD COLUMN "created_by" text;--> statement-breakpoint
+ALTER TABLE "short_links" ADD CONSTRAINT "short_links_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;
