@@ -35,6 +35,7 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
           script: |
             docker pull ghcr.io/${{ github.repository_owner }}/keep-it-short:latest
             docker stop app || true
