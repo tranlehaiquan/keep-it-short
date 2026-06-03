@@ -1,12 +1,14 @@
 name: Deploy
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout
@@ -16,7 +18,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image
@@ -25,7 +27,7 @@ jobs:
           context: .
           file: apps/api/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}:latest
+          tags: ghcr.io/${{ github.repository_owner }}/keep-it-short:latest
 
       - name: SSH and deploy
         uses: appleboy/ssh-action@v1
@@ -34,7 +36,7 @@ jobs:
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            docker pull ghcr.io/${{ github.repository }}:latest
+            docker pull ghcr.io/${{ github.repository_owner }}/keep-it-short:latest
             docker stop app || true
             docker rm app || true
             docker run -d \
@@ -43,4 +45,4 @@ jobs:
               --network app_network \
               -p 3000:3000 \
               --env-file /home/ubuntu/.env \
-              ghcr.io/${{ github.repository }}:latest
+              ghcr.io/${{ github.repository_owner }}/keep-it-short:latest
