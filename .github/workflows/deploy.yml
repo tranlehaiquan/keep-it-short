@@ -30,12 +30,15 @@ jobs:
             set -euo pipefail
             IMAGE="${{ env.IMAGE }}"
 
-            if [ -z "${DEPLOY_ENV:-}" ]; then
-              echo "Missing GitHub secret DEPLOY_ENV (full contents of apps/api/.env for production)."
+            if [ -n "${DEPLOY_ENV:-}" ]; then
+              printf '%s\n' "$DEPLOY_ENV" > /home/ubuntu/.env
+              chmod 600 /home/ubuntu/.env
+            elif [ ! -f /home/ubuntu/.env ]; then
+              echo "No env file found. Either:"
+              echo "  - Add GitHub secret DEPLOY_ENV (full apps/api/.env for production), or"
+              echo "  - Create /home/ubuntu/.env on the VPS before deploying."
               exit 1
             fi
-            printf '%s\n' "$DEPLOY_ENV" > /home/ubuntu/.env
-            chmod 600 /home/ubuntu/.env
 
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             docker network create app_network 2>/dev/null || true
