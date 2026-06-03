@@ -4,7 +4,8 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE: ghcr.io/${{ github.repository_owner }}/keep-it-short:latest
+  IMAGE_API: ghcr.io/${{ github.repository_owner }}/keep-it-short:latest
+  IMAGE_WEB: ghcr.io/${{ github.repository_owner }}/keep-it-short-web:latest
 
 jobs:
   build:
@@ -31,11 +32,20 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Oracle Cloud Ampere (and most ARM VPS) need linux/arm64, not GHA's default amd64
-      - name: Build and push image
+      - name: Build and push API image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: apps/api/Dockerfile
           push: true
-          tags: ${{ env.IMAGE }}
+          tags: ${{ env.IMAGE_API }}
+          platforms: linux/arm64
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_WEB }}
           platforms: linux/arm64
