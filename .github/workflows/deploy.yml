@@ -31,19 +31,37 @@ jobs:
 
       - name: SSH and deploy
         uses: appleboy/ssh-action@v1
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.repository_owner }}
+          DEPLOY_ENV: ${{ secrets.DEPLOY_ENV }}
         with:
           host: ${{ secrets.HOST }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          envs: GHCR_TOKEN,GHCR_USER,DEPLOY_ENV
           script: |
-            docker pull ghcr.io/${{ github.repository_owner }}/keep-it-short:latest
-            docker stop app || true
-            docker rm app || true
+            set -euo pipefail
+            IMAGE="ghcr.io/${{ github.repository_owner }}/keep-it-short:latest"
+
+            if [ -z "${DEPLOY_ENV:-}" ]; then
+              echo "Missing GitHub secret DEPLOY_ENV (full contents of apps/api/.env for production)."
+              exit 1
+            fi
+            printf '%s\n' "$DEPLOY_ENV" > /home/ubuntu/.env
+            chmod 600 /home/ubuntu/.env
+
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            docker network create app_network 2>/dev/null || true
+
+            docker pull "$IMAGE"
+            docker stop app 2>/dev/null || true
+            docker rm app 2>/dev/null || true
             docker run -d \
               --name app \
               --restart always \
               --network app_network \
               -p 3000:3000 \
               --env-file /home/ubuntu/.env \
-              ghcr.io/${{ github.repository_owner }}/keep-it-short:latest
+              "$IMAGE"
