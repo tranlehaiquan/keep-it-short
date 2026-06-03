@@ -42,10 +42,21 @@ jobs:
 
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             docker network create app_network 2>/dev/null || true
+            # App resolves postgres/redis by container name on this network
+            for c in postgres redis; do
+              docker network connect app_network "$c" 2>/dev/null || true
+            done
 
             docker pull "$IMAGE"
             docker stop app 2>/dev/null || true
             docker rm app 2>/dev/null || true
+
+            docker run --rm \
+              --network app_network \
+              --env-file /home/ubuntu/.env \
+              "$IMAGE" \
+              sh -c 'cd /app/apps/api && npx drizzle-kit migrate'
+
             docker run -d \
               --name app \
               --restart always \
