@@ -1,0 +1,71 @@
+# Dev (DB + Redis only):  docker compose up -d
+# Full stack (API + web):   docker compose --profile app up -d --build
+#
+# After first start, run migrations from the host:
+#   DATABASE_URL=postgres://postgres:postgres@localhost:5433/keep-it-short pnpm db:migrate
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: keep-it-short
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d keep-it-short"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass redis_secure_password
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis_secure_password", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - apps/api/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://postgres:postgres@db:5432/keep-it-short
+      REDIS_PASSWORD: redis_secure_password
+      REDIS_URL: redis://:redis_secure_password@redis:6379
+      # Override for the Docker web service (port 80); .env may still list localhost:5173 for Vite dev
+      BETTER_AUTH_URL: http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  redisdata:

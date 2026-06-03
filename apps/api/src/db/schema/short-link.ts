@@ -6,7 +6,7 @@ import {
   timestamp,
   text,
 } from "drizzle-orm/pg-core";
-import { user } from "./auth-schema";
+import { user } from "./auth-schema.js";
 
 export const shortLinkTable = pgTable("short_links", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),

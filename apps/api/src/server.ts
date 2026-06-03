@@ -3,8 +3,8 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { auth } from "./lib/auth.js"; // path to your auth file
 import "./db/redis-instance.js";
-import shortLink from "./routers/shortLink";
-import getShortLink from "./routers/getShortLink";
+import shortLink from "./routers/shortLink.js";
+import getShortLink from "./routers/getShortLink.js";
 import { cors } from "hono/cors";
 
 const app = new Hono<{
