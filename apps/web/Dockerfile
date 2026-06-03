@@ -29,6 +29,7 @@ RUN pnpm --filter web build
 
 # ─── runner ─────────────────────────────────────────────────────────────────
 FROM nginx:alpine AS runner
+COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /repo/apps/web/dist /usr/share/nginx/html
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
