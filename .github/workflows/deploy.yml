@@ -55,7 +55,7 @@ jobs:
               --network app_network \
               --env-file /home/ubuntu/.env \
               "$IMAGE" \
-              sh -c 'cd /app/apps/api && npx drizzle-kit migrate'
+              node dist/migrate.js
 
             docker run -d \
               --name app \
