@@ -41,11 +41,15 @@ services:
       dockerfile: apps/api/Dockerfile
     ports:
       - "3000:3000"
+    env_file:
+      - apps/api/.env
     environment:
       NODE_ENV: production
       DATABASE_URL: postgres://postgres:postgres@db:5432/keep-it-short
       REDIS_PASSWORD: redis_secure_password
       REDIS_URL: redis://:redis_secure_password@redis:6379
+      # Override for the Docker web service (port 80); .env may still list localhost:5173 for Vite dev
+      BETTER_AUTH_URL: http://localhost:3000
     depends_on:
       db:
         condition: service_healthy

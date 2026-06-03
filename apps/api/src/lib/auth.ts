@@ -10,12 +10,16 @@ if (process.env.NODE_ENV === "development") {
   plugins.push(openAPI());
 }
 
+const trustedOrigins = process.env.BETTER_AUTH_TRUSTED_ORIGINS
+  ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(",").map((o) => o.trim())
+  : ["http://localhost:5173", "http://localhost"];
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
     schema,
   }),
-  trustedOrigins: ["http://localhost:5173"],
+  trustedOrigins,
   emailAndPassword: {
     enabled: true,
   },

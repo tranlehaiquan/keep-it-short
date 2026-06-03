@@ -29,7 +29,8 @@ RUN pnpm --filter web build
 
 # ─── runner ─────────────────────────────────────────────────────────────────
 FROM nginx:alpine AS runner
-COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+# Do not use default.conf — the stock nginx entrypoint mutates it at startup.
+COPY apps/web/nginx.conf /etc/nginx/conf.d/app.conf
 COPY --from=builder /repo/apps/web/dist /usr/share/nginx/html
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
