@@ -27,10 +27,7 @@ COPY apps/web ./apps/web
 
 RUN pnpm --filter web build
 
-# ─── runner ─────────────────────────────────────────────────────────────────
-FROM nginx:alpine AS runner
-# Do not use default.conf — the stock nginx entrypoint mutates it at startup.
-COPY apps/web/nginx.conf /etc/nginx/conf.d/app.conf
-COPY --from=builder /repo/apps/web/dist /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# ─── artifact ───────────────────────────────────────────────────────────────
+# Minimal image; container exits after volume is populated
+FROM scratch
+COPY --from=builder /repo/apps/web/dist /dist
