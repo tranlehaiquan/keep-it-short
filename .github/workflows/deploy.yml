@@ -82,5 +82,5 @@ jobs:
               --name web \
               --restart always \
               --network app_network \
-              -p 80:80 \
+              -p 4000:4000 \
               "$IMAGE_WEB"
