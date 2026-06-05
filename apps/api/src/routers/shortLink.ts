@@ -9,7 +9,13 @@ import redis from "../db/redis-instance.js";
 import type { auth } from "../lib/auth.js";
 
 const createSchema = z.object({
-  url: z.url(),
+  url: z
+    .string()
+    .transform((url) => {
+      // Normalize URL by adding https:// if no protocol is provided
+      return url.match(/^https?:\/\//i) ? url : `https://${url}`;
+    })
+    .pipe(z.url()),
   expiredAt: z.iso.datetime().optional(),
 });
 

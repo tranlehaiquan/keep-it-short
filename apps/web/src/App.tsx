@@ -24,7 +24,11 @@ function App() {
     setExpiredAt("");
 
     try {
-      const response = await client.api.url.$post({ json: { url } });
+      // Normalize URL by adding https:// if no protocol is provided
+      const normalizedUrl = url.match(/^https?:\/\//i) ? url : `https://${url}`;
+      const response = await client.api.url.$post({
+        json: { url: normalizedUrl },
+      });
       if (!response.ok) {
         throw new Error("Failed to shorten URL");
       }
@@ -91,8 +95,8 @@ function App() {
                 </label>
                 <input
                   id="url"
-                  type="url"
-                  placeholder="https://example.com/very-long-url-here"
+                  type="text"
+                  placeholder="example.com/very-long-url-here"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   required
@@ -189,12 +193,6 @@ function App() {
           {session && (
             <ShortLinkHistory refetchTrigger={historyRefetchTrigger} />
           )}
-
-          {/* Footer */}
-          <p className="mt-12 text-center text-gray-400 text-sm font-medium">
-            Built with <span className="text-blue-500">React</span> &{" "}
-            <span className="text-cyan-500">Tailwind CSS</span>
-          </p>
         </div>
       </div>
     </>
