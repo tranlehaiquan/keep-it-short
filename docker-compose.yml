@@ -67,35 +67,7 @@ services:
     command: ["pnpm", "--filter", "web", "preview", "--", "--port", "4000"]
     restart: unless-stopped
 
-  nginx:
-    profiles: [app]
-    build:
-      context: .
-      dockerfile: Dockerfile.nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - web_dist:/usr/share/nginx/html
-      - certbot-www:/var/www/certbot:ro
-      - certbot-certs:/etc/letsencrypt:ro
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/app.conf:ro
-    depends_on:
-      - api
-      - web
-
-  certbot:
-    image: certbot/certbot
-    profiles: [app]
-    volumes:
-      - certbot-www:/var/www/certbot
-      - certbot-certs:/etc/letsencrypt
-    entrypoint: ["/bin/sh", "-c", "sleep infinity"]
-    restart: "no"
-
 volumes:
   pgdata:
   redisdata:
   web_dist:
-  certbot-www:
-  certbot-certs:

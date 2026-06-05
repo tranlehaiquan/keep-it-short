@@ -27,7 +27,15 @@ COPY apps/web ./apps/web
 
 RUN pnpm --filter web build
 
-# ─── artifact ───────────────────────────────────────────────────────────────
-# Minimal image; container exits after volume is populated
-FROM scratch
-COPY --from=builder /repo/apps/web/dist /dist
+# ─── serve ──────────────────────────────────────────────────────────────────
+FROM nginx:alpine
+
+ARG PORT=4000
+ENV PORT=${PORT}
+
+COPY --from=builder /repo/apps/web/dist /usr/share/nginx/html
+
+# Inject port at runtime via envsubst
+COPY apps/web/nginx.conf /etc/nginx/templates/default.conf.template
+
+EXPOSE ${PORT}
