@@ -56,7 +56,7 @@ const app = new Hono<{
       return c.json(
         {
           slug: record.slug,
-          shortUrl: `${new URL(c.req.url).origin}/c/${record.slug}`,
+          shortUrl: `${process.env.BASE_URL ?? new URL(c.req.url).origin}/c/${record.slug}`,
           expiredAt: record.expiredAt,
         },
         201,
