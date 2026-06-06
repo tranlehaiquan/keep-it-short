@@ -4,8 +4,7 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_API: ghcr.io/${{ github.repository_owner }}/keep-it-short:latest
-  IMAGE_WEB: ghcr.io/${{ github.repository_owner }}/keep-it-short-web:latest
+  IMAGE: ghcr.io/${{ github.repository_owner }}/keep-it-short:latest
 
 jobs:
   deploy:
@@ -29,8 +28,7 @@ jobs:
           envs: GHCR_TOKEN,GHCR_USER,DEPLOY_ENV
           script: |
             set -euo pipefail
-            IMAGE_API="${{ env.IMAGE_API }}"
-            IMAGE_WEB="${{ env.IMAGE_WEB }}"
+            IMAGE="${{ env.IMAGE }}"
 
             if [ -n "${DEPLOY_ENV:-}" ]; then
               printf '%s\n' "$DEPLOY_ENV" > /home/ubuntu/.env
@@ -52,8 +50,7 @@ jobs:
             sudo systemctl stop nginx 2>/dev/null || true
             sudo systemctl disable nginx 2>/dev/null || true
 
-            docker pull "$IMAGE_API"
-            docker pull "$IMAGE_WEB"
+            docker pull "$IMAGE"
 
             docker stop app 2>/dev/null || true
             docker rm app 2>/dev/null || true
@@ -61,26 +58,16 @@ jobs:
             docker run --rm \
               --network app_network \
               --env-file /home/ubuntu/.env \
-              "$IMAGE_API" \
+              "$IMAGE" \
               node dist/migrate.js
 
-            # nginx.conf proxies to hostname "api"
+            docker stop api 2>/dev/null || true
+            docker rm api 2>/dev/null || true
+
             docker run -d \
               --name api \
-              --hostname api \
-              --network-alias api \
               --restart always \
               --network app_network \
               -p 3000:3000 \
               --env-file /home/ubuntu/.env \
-              "$IMAGE_API"
-
-            docker stop web 2>/dev/null || true
-            docker rm web 2>/dev/null || true
-
-            docker run -d \
-              --name web \
-              --restart always \
-              --network app_network \
-              -p 4000:4000 \
-              "$IMAGE_WEB"
+              "$IMAGE"

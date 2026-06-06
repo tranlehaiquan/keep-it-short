@@ -4,7 +4,7 @@ import db from "../db/index.js";
 import { shortLinkTable, type ShortLink } from "../db/schema/short-link.js";
 import redis from "../db/redis-instance.js";
 
-const app = new Hono().get("/:slug", async (c) => {
+const app = new Hono().get("/:slug{[0-9A-Za-z_-]{6}}", async (c) => {
   const slug = c.req.param("slug");
 
   const cached = await redis.get(slug);

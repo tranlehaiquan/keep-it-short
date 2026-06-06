@@ -21,6 +21,11 @@ app.use("/api/*", cors({ origin: "http://localhost:5173", credentials: true }));
 app.use("/assets/*", serveStatic({ root: "../web/dist" }));
 app.get("/", serveStatic({ path: "../web/dist/index.html" }));
 
+// SPA fallback — serve index.html for unmatched routes in production
+if (process.env.NODE_ENV === "production") {
+  app.use("*", serveStatic({ path: "../web/dist/index.html" }));
+}
+
 app.use("*", async (c, next) => {
   const session = await auth.api.getSession({ headers: c.req.raw.headers });
   if (!session) {
