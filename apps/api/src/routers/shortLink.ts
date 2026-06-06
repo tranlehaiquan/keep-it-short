@@ -43,8 +43,6 @@ const app = new Hono<{
       createdBy: user?.id,
     };
 
-    console.log(record);
-
     try {
       await db.insert(shortLinkTable).values(record);
 
@@ -58,7 +56,7 @@ const app = new Hono<{
       return c.json(
         {
           slug: record.slug,
-          shortUrl: `${new URL(c.req.url).origin}/${record.slug}`,
+          shortUrl: `${new URL(c.req.url).origin}/c/${record.slug}`,
           expiredAt: record.expiredAt,
         },
         201,

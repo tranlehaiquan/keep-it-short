@@ -48,7 +48,7 @@ const ShortLinkHistory: React.FC<Props> = ({ refetchTrigger = 0 }) => {
   }, [load, refetchTrigger]);
 
   const handleCopy = async (item: ShortLinkItem) => {
-    const shortUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/${item.slug}`;
+    const shortUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/c/${item.slug}`;
     const ok = await copyToClipboard(shortUrl);
     if (ok) {
       setCopiedSlug(item.slug);
@@ -86,7 +86,7 @@ const ShortLinkHistory: React.FC<Props> = ({ refetchTrigger = 0 }) => {
       ) : (
         <ul className="space-y-4">
           {items.map((item) => {
-            const shortUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/${item.slug}`;
+            const shortUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/c/${item.slug}`;
             const isExpired =
               new Date(item.expiredAt).getTime() < Date.now();
             return (

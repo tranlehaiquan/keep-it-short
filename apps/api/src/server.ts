@@ -41,7 +41,7 @@ app.use("*", async (c, next) => {
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
-const route = app.route("/", getShortLink).route("/api", shortLink);
+const route = app.route("/c", getShortLink).route("/api", shortLink);
 export type AppType = typeof route;
 
 serve(
