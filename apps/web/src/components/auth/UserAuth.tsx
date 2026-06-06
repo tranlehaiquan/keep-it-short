@@ -35,7 +35,7 @@ const UserAuth: React.FC<Props> = (props) => {
     );
   }
 
-  if (!session) {
+  if (!session || !session.user) {
     return (
       <>
         <div className={cn("flex items-center gap-2", props.className)}>

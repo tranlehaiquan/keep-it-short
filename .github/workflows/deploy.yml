@@ -46,10 +46,6 @@ jobs:
               docker network connect app_network "$c" 2>/dev/null || true
             done
 
-            # Free port 80 if host nginx is installed
-            sudo systemctl stop nginx 2>/dev/null || true
-            sudo systemctl disable nginx 2>/dev/null || true
-
             docker pull "$IMAGE"
 
             docker stop app 2>/dev/null || true

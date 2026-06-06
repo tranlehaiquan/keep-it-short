@@ -12,7 +12,7 @@ if (process.env.NODE_ENV === "development") {
 
 const trustedOrigins = process.env.BETTER_AUTH_TRUSTED_ORIGINS
   ? process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(",").map((o) => o.trim())
-  : ["http://localhost:5173", "http://localhost"];
+  : ["http://localhost:5173", "http://localhost:3000"];
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
