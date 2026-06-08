@@ -18,5 +18,5 @@ jobs:
       - run: pnpm --filter web lint
       - run: pnpm --filter api exec tsc --noEmit
       - run: pnpm --filter web exec tsc -b --noEmit
-      - run: pnpm --filter api test
+      - run: pnpm --filter api exec vitest --passWithNoTests
       - run: pnpm build

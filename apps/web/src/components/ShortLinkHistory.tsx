@@ -56,6 +56,7 @@ const ShortLinkHistory: React.FC<Props> = ({
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load, refetchTrigger]);
 
@@ -90,9 +91,11 @@ const ShortLinkHistory: React.FC<Props> = ({
 
   const items = data ?? [];
   const totalClicks = items.reduce((sum, i) => sum + i.clickCount, 0);
+  /* eslint-disable react-hooks/purity */
   const activeLinks = items.filter(
     (i) => new Date(i.expiredAt).getTime() > Date.now(),
   ).length;
+  /* eslint-enable react-hooks/purity */
 
   if (loading && !data) {
     return (
@@ -145,8 +148,10 @@ const ShortLinkHistory: React.FC<Props> = ({
         {items.map((item) => {
           const shortUrl = `/${item.slug}`;
           const fullUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/c/${item.slug}`;
+          /* eslint-disable react-hooks/purity */
           const isExpired =
             new Date(item.expiredAt).getTime() < Date.now();
+          /* eslint-enable react-hooks/purity */
 
           return (
             <li

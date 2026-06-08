@@ -27,21 +27,25 @@ function App() {
 
     try {
       const normalizedUrl = url.match(/^https?:\/\//i) ? url : `https://${url}`;
-      const body: Record<string, string> = { url: normalizedUrl };
+      const body: { url: string; slug?: string } = { url: normalizedUrl };
       if (slug.trim()) body.slug = slug.trim();
 
-      const response = await client.api.url.$post({ json: body as any });
+      const response = await client.api.url.$post({ json: body });
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error((errData as any)?.error || "Failed to shorten URL");
+        const errData = (await response.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        throw new Error(errData?.error || "Failed to shorten URL");
       }
 
       const data = await response.json();
       setShortUrl(data.shortUrl);
       setExpiredAt(data.expiredAt);
       setHistoryRefetchTrigger((n) => n + 1);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to shorten URL";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
