@@ -7,6 +7,7 @@ import db from "../db/index.js";
 import { shortLinkTable } from "../db/schema/short-link.js";
 import redis from "../db/redis-instance.js";
 import type { auth } from "../lib/auth.js";
+import { rateLimit } from "../middlewares/rateLimit.js";
 
 const slugSchema = z
   .string()
@@ -31,7 +32,7 @@ const app = new Hono<{
     session: typeof auth.$Infer.Session.session | null;
   };
 }>()
-  .post("/url", zValidator("json", createSchema), async (c) => {
+  .post("/url", zValidator("json", createSchema), rateLimit, async (c) => {
     const { url, expiredAt: customExpiredAt, slug: customSlug } = c.req.valid("json");
     const user = c.get("user");
 
