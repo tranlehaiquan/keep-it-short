@@ -1,5 +1,5 @@
 # Dev (DB + Redis only):  docker compose up -d
-# Full stack (API + web):   docker compose --profile app up -d --build
+# Full stack (API + web):   docker compose up -d --build
 #
 # After first start, run migrations from the host:
 #   DATABASE_URL=postgres://postgres:postgres@localhost:5433/keep-it-short pnpm db:migrate
@@ -46,8 +46,6 @@ services:
       - "3000:3000"
     networks:
       - app-network
-    env_file:
-      - apps/api/.env
     environment:
       NODE_ENV: production
       DATABASE_URL: postgres://postgres:postgres@db:5432/keep-it-short
