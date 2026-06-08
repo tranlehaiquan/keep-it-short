@@ -2,9 +2,10 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import * as z from "zod";
 import { nanoid } from "nanoid";
-import { desc, eq, and } from "drizzle-orm";
+import { desc, eq, and, gte } from "drizzle-orm";
 import db from "../db/index.js";
 import { shortLinkTable } from "../db/schema/short-link.js";
+import { clickEventTable } from "../db/schema/click-event.js";
 import redis from "../db/redis-instance.js";
 import type { auth } from "../lib/auth.js";
 import { rateLimit } from "../middlewares/rateLimit.js";
@@ -125,6 +126,136 @@ const app = new Hono<{
     await redis.del(slug);
 
     return c.json({ success: true });
+  })
+  .get("/url/:slug{[0-9A-Za-z_-]{4,16}}/stats", async (c) => {
+    const user = c.get("user");
+    const slug = c.req.param("slug");
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const [link] = await db
+      .select()
+      .from(shortLinkTable)
+      .where(and(eq(shortLinkTable.slug, slug), eq(shortLinkTable.createdBy, user.id)))
+      .limit(1);
+
+    if (!link) {
+      return c.json({ error: "Not found" }, 404);
+    }
+
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const events = await db
+      .select({
+        timestamp: clickEventTable.timestamp,
+        userAgent: clickEventTable.userAgent,
+      })
+      .from(clickEventTable)
+      .where(and(eq(clickEventTable.slug, slug), gte(clickEventTable.timestamp, thirtyDaysAgo)))
+      .orderBy(clickEventTable.timestamp);
+
+    const dailyBreakdown: Record<string, number> = {};
+    const browserCounts: Record<string, number> = {};
+    const osCounts: Record<string, number> = {};
+
+    for (const event of events) {
+      const day = event.timestamp.toISOString().split("T")[0];
+      dailyBreakdown[day] = (dailyBreakdown[day] ?? 0) + 1;
+
+      if (event.userAgent) {
+        const browser = parseBrowser(event.userAgent);
+        browserCounts[browser] = (browserCounts[browser] ?? 0) + 1;
+
+        const os = parseOS(event.userAgent);
+        osCounts[os] = (osCounts[os] ?? 0) + 1;
+      } else {
+        browserCounts["Unknown"] = (browserCounts["Unknown"] ?? 0) + 1;
+        osCounts["Unknown"] = (osCounts["Unknown"] ?? 0) + 1;
+      }
+    }
+
+    const daily = Object.entries(dailyBreakdown)
+      .map(([date, clicks]) => ({ date, clicks }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    const browsers = Object.entries(browserCounts)
+      .map(([name, clicks]) => ({ name, clicks }))
+      .sort((a, b) => b.clicks - a.clicks);
+
+    const oses = Object.entries(osCounts)
+      .map(([name, clicks]) => ({ name, clicks }))
+      .sort((a, b) => b.clicks - a.clicks);
+
+    return c.json({ daily, browsers, oses });
+  })
+  .patch("/url/:slug{[0-9A-Za-z_-]{4,16}}", zValidator("json", z.object({
+    url: z
+      .string()
+      .transform((url) => url.match(/^https?:\/\//i) ? url : `https://${url}`)
+      .pipe(z.url())
+      .optional(),
+    expiredAt: z.iso.datetime().optional(),
+  }).refine((d) => d.url || d.expiredAt, { message: "Provide url or expiredAt" })), async (c) => {
+    const user = c.get("user");
+    const slug = c.req.param("slug");
+    const { url, expiredAt } = c.req.valid("json");
+
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const [link] = await db
+      .select()
+      .from(shortLinkTable)
+      .where(and(eq(shortLinkTable.slug, slug), eq(shortLinkTable.createdBy, user.id)))
+      .limit(1);
+
+    if (!link) {
+      return c.json({ error: "Not found" }, 404);
+    }
+
+    const updates: Record<string, unknown> = {};
+    if (url) updates.url = url;
+    if (expiredAt) updates.expiredAt = new Date(expiredAt);
+
+    try {
+      const [updated] = await db
+        .update(shortLinkTable)
+        .set(updates)
+        .where(eq(shortLinkTable.slug, slug))
+        .returning();
+
+      await redis.del(slug);
+
+      return c.json({
+        slug: updated.slug,
+        url: updated.url,
+        expiredAt: updated.expiredAt,
+        clickCount: updated.clickCount,
+      });
+    } catch (err) {
+      console.error("Update error:", err);
+      return c.json({ error: "Failed to update link" }, 500);
+    }
   });
+
+function parseBrowser(ua: string): string {
+  if (/Edg\//.test(ua)) return "Edge";
+  if (/Firefox\//.test(ua)) return "Firefox";
+  if (/Chrome\//.test(ua) && !/OPR\//.test(ua)) return "Chrome";
+  if (/Safari\//.test(ua) && !/Chrome\//.test(ua)) return "Safari";
+  if (/OPR\//.test(ua)) return "Opera";
+  return "Other";
+}
+
+function parseOS(ua: string): string {
+  if (/Windows/.test(ua)) return "Windows";
+  if (/Mac OS X/.test(ua) || /macOS/.test(ua)) return "macOS";
+  if (/Linux/.test(ua) && !/Android/.test(ua)) return "Linux";
+  if (/Android/.test(ua)) return "Android";
+  if (/iP(hone|ad|od)/.test(ua)) return "iOS";
+  return "Other";
+}
 
 export default app;

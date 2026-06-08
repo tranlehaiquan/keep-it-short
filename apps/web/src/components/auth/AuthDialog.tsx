@@ -49,6 +49,7 @@ export interface AuthDialogProps {
   onOpenChange: (open: boolean) => void;
   mode: AuthDialogMode;
   onSuccess?: () => void;
+  onForgotPassword?: () => void;
 }
 
 const AuthDialog: React.FC<AuthDialogProps> = ({
@@ -56,6 +57,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
   onOpenChange,
   mode,
   onSuccess,
+  onForgotPassword,
 }) => {
   const [submitError, setSubmitError] = React.useState<string | null>(null);
 
@@ -209,6 +211,17 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
                   : "Sign up"}
             </Button>
           </DialogFooter>
+          {mode === "login" && onForgotPassword && (
+            <p className="text-center">
+              <button
+                type="button"
+                onClick={onForgotPassword}
+                className="text-xs text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 underline underline-offset-2"
+              >
+                Forgot your password?
+              </button>
+            </p>
+          )}
         </form>
       </DialogContent>
     </Dialog>

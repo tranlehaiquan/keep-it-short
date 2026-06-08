@@ -37,3 +37,37 @@ export async function deleteShortLink(slug: string): Promise<boolean> {
   }
   return true;
 }
+
+export async function updateShortLink(
+  slug: string,
+  data: { url?: string; expiredAt?: string },
+): Promise<ShortLinkItem> {
+  const res = await fetch(`${getApiBase()}/api/url/${encodeURIComponent(slug)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? "Failed to update link");
+  }
+  return res.json();
+}
+
+export interface StatsResponse {
+  daily: { date: string; clicks: number }[];
+  browsers: { name: string; clicks: number }[];
+  oses: { name: string; clicks: number }[];
+}
+
+export async function fetchShortLinkStats(slug: string): Promise<StatsResponse> {
+  const res = await fetch(`${getApiBase()}/api/url/${encodeURIComponent(slug)}/stats`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(err.error ?? "Failed to load stats");
+  }
+  return res.json();
+}

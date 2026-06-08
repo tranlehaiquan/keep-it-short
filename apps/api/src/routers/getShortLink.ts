@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { eq, sql } from "drizzle-orm";
 import db from "../db/index.js";
 import { shortLinkTable, type ShortLink } from "../db/schema/short-link.js";
+import { clickEventTable } from "../db/schema/click-event.js";
 import redis from "../db/redis-instance.js";
 
 const app = new Hono().get("/:slug{[0-9A-Za-z_-]{6}}", async (c) => {
@@ -19,7 +20,6 @@ const app = new Hono().get("/:slug{[0-9A-Za-z_-]{6}}", async (c) => {
       shortLink = JSON.parse(cached);
     } catch (e) {
       console.error("Error parsing cached shortLink:", e);
-      // If cached data is corrupted or invalid JSON, treat as a cache miss
     }
   }
 
@@ -39,22 +39,34 @@ const app = new Hono().get("/:slug{[0-9A-Za-z_-]{6}}", async (c) => {
       if (ttlSeconds > 0) {
         await redis.set(slug, JSON.stringify(shortLink), { EX: ttlSeconds });
       } else {
-        // Link found in DB but expired, set negative cache
         await redis.set(slug, "NOT_FOUND", { EX: 60 });
         return c.json({ message: "Link not found or expired" }, 404);
       }
     } else {
-      // Slug not found in DB at all, set negative cache
       await redis.set(slug, "NOT_FOUND", { EX: 60 });
       return c.json({ message: "Link not found or expired" }, 404);
     }
   }
 
-  db.update(shortLinkTable)
-    .set({ clickCount: sql`${shortLinkTable.clickCount} + 1` })
-    .where(eq(shortLinkTable.slug, slug))
-    .execute()
-    .catch((err) => console.error("Analytics error:", err));
+  const clickEvent = {
+    slug,
+    userAgent: c.req.header("user-agent") ?? null,
+    referer: c.req.header("referer") ?? null,
+  };
+
+  Promise.all([
+    db
+      .update(shortLinkTable)
+      .set({ clickCount: sql`${shortLinkTable.clickCount} + 1` })
+      .where(eq(shortLinkTable.slug, slug))
+      .execute()
+      .catch((err) => console.error("Click count error:", err)),
+    db
+      .insert(clickEventTable)
+      .values(clickEvent)
+      .execute()
+      .catch((err) => console.error("Click event error:", err)),
+  ]);
 
   return c.redirect(shortLink.url);
 });
