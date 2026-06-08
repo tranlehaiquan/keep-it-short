@@ -11,6 +11,8 @@ services:
       POSTGRES_DB: keep-it-short
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+    networks:
+      - app-network
     ports:
       - "5433:5432"
     volumes:
@@ -24,6 +26,8 @@ services:
   redis:
     image: redis:7-alpine
     command: redis-server --requirepass redis_secure_password
+    networks:
+      - app-network
     ports:
       - "6379:6379"
     volumes:
@@ -35,12 +39,13 @@ services:
       retries: 5
 
   app:
-    profiles: [app]
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
+    networks:
+      - app-network
     env_file:
       - apps/api/.env
     environment:
@@ -48,7 +53,12 @@ services:
       DATABASE_URL: postgres://postgres:postgres@db:5432/keep-it-short
       REDIS_PASSWORD: redis_secure_password
       REDIS_URL: redis://:redis_secure_password@redis:6379
-      BETTER_AUTH_URL: http://localhost:3000
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${DOMAIN:-http://localhost:3000}
+      BETTER_AUTH_TRUSTED_ORIGINS: ${DOMAIN:-http://localhost:3000}
+      BASE_URL: ${DOMAIN:-http://localhost:3000}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-10}
+      RATE_LIMIT_WINDOW_SECONDS: ${RATE_LIMIT_WINDOW_SECONDS:-60}
     depends_on:
       db:
         condition: service_healthy
@@ -58,3 +68,7 @@ services:
 volumes:
   pgdata:
   redisdata:
+
+networks:
+  app-network:
+    driver: bridge
