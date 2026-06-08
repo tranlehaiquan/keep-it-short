@@ -76,6 +76,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
 
   React.useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSubmitError(null);
       form.reset({ name: "", email: "", password: "" });
     }
