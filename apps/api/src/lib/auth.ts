@@ -22,6 +22,12 @@ export const auth = betterAuth({
   trustedOrigins,
   emailAndPassword: {
     enabled: true,
+    sendResetPassword: async ({ user, url, token }) => {
+      console.log("Password reset requested:");
+      console.log("  User:", user.email);
+      console.log("  Reset URL:", url);
+      console.log("  Token:", token);
+    },
   },
   plugins,
   // socialProviders: {

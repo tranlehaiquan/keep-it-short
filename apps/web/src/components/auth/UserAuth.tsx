@@ -3,6 +3,7 @@ import { authClient } from "@/lib/auth-client";
 import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
 import AuthDialog, { type AuthDialogMode } from "./AuthDialog";
+import ForgotPasswordDialog from "./ForgotPasswordDialog";
 
 interface Props {
   className?: string;
@@ -14,6 +15,7 @@ const UserAuth: React.FC<Props> = (props) => {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthDialogMode>("login");
+  const [forgotOpen, setForgotOpen] = useState(false);
 
   const openDialog = (mode: AuthDialogMode) => {
     setAuthMode(mode);
@@ -49,6 +51,14 @@ const UserAuth: React.FC<Props> = (props) => {
           onOpenChange={setDialogOpen}
           mode={authMode}
           onSuccess={refetch}
+          onForgotPassword={() => {
+            setDialogOpen(false);
+            setForgotOpen(true);
+          }}
+        />
+        <ForgotPasswordDialog
+          open={forgotOpen}
+          onOpenChange={setForgotOpen}
         />
       </>
     );

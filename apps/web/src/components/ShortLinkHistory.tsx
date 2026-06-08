@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Trash2, Copy, ExternalLink, BarChart3, Clock, Link2 } from "lucide-react";
+import { Trash2, Copy, ExternalLink, BarChart3, Clock, Link2, Pencil } from "lucide-react";
 import {
   fetchShortLinkHistory,
   deleteShortLink,
   type ShortLinkItem,
 } from "@/apis/history";
+import StatsDialog from "./StatsDialog";
+import EditLinkDialog from "./EditLinkDialog";
 
 function relativeTime(dateStr: string) {
   const diff = new Date(dateStr).getTime() - Date.now();
@@ -39,6 +41,8 @@ const ShortLinkHistory: React.FC<Props> = ({
   const [loading, setLoading] = useState(true);
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
   const [deletingSlug, setDeletingSlug] = useState<string | null>(null);
+  const [statsSlug, setStatsSlug] = useState<string | null>(null);
+  const [editingLink, setEditingLink] = useState<ShortLinkItem | null>(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -206,6 +210,22 @@ const ShortLinkHistory: React.FC<Props> = ({
                 <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-100">
                   <button
                     type="button"
+                    onClick={() => setStatsSlug(item.slug)}
+                    className="rounded-lg p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-500 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 transition-colors"
+                    title="View stats"
+                  >
+                    <BarChart3 className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingLink(item)}
+                    className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-colors"
+                    title="Edit link"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleCopy(item)}
                     className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-colors"
                     title="Copy link"
@@ -254,6 +274,26 @@ const ShortLinkHistory: React.FC<Props> = ({
           );
         })}
       </ul>
+
+      <StatsDialog
+        open={!!statsSlug}
+        onOpenChange={(open) => {
+          if (!open) setStatsSlug(null);
+        }}
+        slug={statsSlug ?? ""}
+      />
+
+      <EditLinkDialog
+        open={!!editingLink}
+        onOpenChange={(open) => {
+          if (!open) setEditingLink(null);
+        }}
+        link={editingLink}
+        onSuccess={() => {
+          setEditingLink(null);
+          onDelete?.();
+        }}
+      />
     </div>
   );
 };

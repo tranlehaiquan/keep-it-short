@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { Link2, Copy, Check, ArrowRight } from "lucide-react";
 import client from "./apis/client";
@@ -6,6 +6,7 @@ import { authClient } from "./lib/auth-client";
 import { QRCodeCanvas } from "qrcode.react";
 import Header from "./components/Header";
 import ShortLinkHistory from "./components/ShortLinkHistory";
+import ResetPasswordDialog from "./components/auth/ResetPasswordDialog";
 
 function App() {
   const { useSession } = authClient;
@@ -17,6 +18,18 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [historyRefetchTrigger, setHistoryRefetchTrigger] = useState(0);
+
+  const resetToken = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("token") ?? undefined;
+  }, []);
+  const [resetOpen, setResetOpen] = useState(!!resetToken);
+
+  useEffect(() => {
+    if (resetToken) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [resetToken]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -281,6 +294,13 @@ function App() {
           )}
         </div>
       </div>
+      {resetToken && (
+        <ResetPasswordDialog
+          open={resetOpen}
+          onOpenChange={setResetOpen}
+          token={resetToken}
+        />
+      )}
     </>
   );
 }
