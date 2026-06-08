@@ -37,20 +37,42 @@ A simple URL shortener with a React frontend and a Hono backend.
     - Navigate to `apps/api` and copy `.env.example` to `.env`.
     - Update the `.env` file with your database and Redis credentials.
 
-### Running the development servers
+### Docker Compose
 
-1.  Start the database and Redis using Docker:
-    ```bash
-    docker-compose up -d
-    ```
-2.  Run the database migrations:
-    ```bash
-    pnpm db:migrate
-    ```
-3.  Start the development servers for both the `api` and `web` apps:
-    ```bash
-    pnpm dev
-    ```
+The project includes a `docker-compose.yml` with three services: `db` (PostgreSQL), `redis`, and `app` (API + web frontend).
+
+**Environment variables**
+
+The app service reads variables from two places (the compose `environment` section takes precedence over `env_file`):
+
+- `env_file: apps/api/.env` — local dev overrides (copy from `.env.example`)
+- `environment:` — compose-managed vars using `${VAR}` substitution from the root `.env` file
+
+Create a root `.env` with your domain and a generated auth secret:
+
+```bash
+# .env (project root — read by docker compose for ${VAR} substitution)
+DOMAIN=http://localhost:3000
+BETTER_AUTH_SECRET=$(openssl rand -base64 32)
+# Optional: override rate-limit defaults
+# RATE_LIMIT_MAX_REQUESTS=10
+# RATE_LIMIT_WINDOW_SECONDS=60
+```
+
+#### Development (db + redis only, run app from host)
+
+```bash
+docker compose up -d                    # starts postgres (localhost:5433) + redis (localhost:6379)
+DATABASE_URL=postgres://postgres:postgres@localhost:5433/keep-it-short pnpm db:migrate
+pnpm dev                                # starts api + web dev servers
+```
+
+#### Production (full stack in Docker)
+
+```bash
+docker compose up -d --build            # starts db, redis, and app (localhost:3000)
+docker compose exec app node dist/migrate.js  # run migrations inside the container
+```
 
 ## Architecture
 
