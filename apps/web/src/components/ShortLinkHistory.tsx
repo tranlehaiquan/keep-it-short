@@ -1,42 +1,54 @@
 import React, { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Trash2, Copy, ExternalLink, BarChart3, Clock, Link2 } from "lucide-react";
 import {
   fetchShortLinkHistory,
+  deleteShortLink,
   type ShortLinkItem,
 } from "@/apis/history";
 
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleString(undefined, {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
-}
+function relativeTime(dateStr: string) {
+  const diff = new Date(dateStr).getTime() - Date.now();
+  const abs = Math.abs(diff);
+  const minutes = Math.floor(abs / 60000);
+  const hours = Math.floor(abs / 3600000);
+  const days = Math.floor(abs / 86400000);
 
-function copyToClipboard(text: string) {
-  return navigator.clipboard.writeText(text).then(
-    () => true,
-    () => false
-  );
+  if (diff < 0) {
+    if (minutes < 1) return "Expired";
+    if (minutes < 60) return `Expired ${minutes}m ago`;
+    if (hours < 24) return `Expired ${hours}h ago`;
+    return `Expired ${days}d ago`;
+  }
+  if (minutes < 1) return "Expires now";
+  if (minutes < 60) return `Expires in ${minutes}m`;
+  if (hours < 24) return `Expires in ${hours}h`;
+  return `Expires in ${days}d`;
 }
 
 interface Props {
   refetchTrigger?: number;
+  onDelete?: () => void;
 }
 
-const ShortLinkHistory: React.FC<Props> = ({ refetchTrigger = 0 }) => {
+const ShortLinkHistory: React.FC<Props> = ({
+  refetchTrigger = 0,
+  onDelete,
+}) => {
   const [data, setData] = useState<ShortLinkItem[] | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+  const [deletingSlug, setDeletingSlug] = useState<string | null>(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const res = await fetchShortLinkHistory();
       setData(res?.items ?? []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load history");
+      toast.error(
+        e instanceof Error ? e.message : "Failed to load history",
+      );
       setData([]);
     } finally {
       setLoading(false);
@@ -48,86 +60,195 @@ const ShortLinkHistory: React.FC<Props> = ({ refetchTrigger = 0 }) => {
   }, [load, refetchTrigger]);
 
   const handleCopy = async (item: ShortLinkItem) => {
-    const shortUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/c/${item.slug}`;
-    const ok = await copyToClipboard(shortUrl);
-    if (ok) {
+    const fullUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/c/${item.slug}`;
+    try {
+      await navigator.clipboard.writeText(fullUrl);
       setCopiedSlug(item.slug);
       setTimeout(() => setCopiedSlug(null), 2000);
+      toast.success("Copied!");
+    } catch {
+      toast.error("Failed to copy");
     }
   };
 
-  if (loading && !data) {
-    return (
-      <div className="mt-8 bg-white rounded-3xl shadow-[0_20px_50px_rgba(8,112,184,0.07)] border border-gray-100 p-8">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">Your links</h2>
-        <p className="text-gray-500 text-sm">Loading...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="mt-8 bg-white rounded-3xl shadow-[0_20px_50px_rgba(8,112,184,0.07)] border border-gray-100 p-8">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">Your links</h2>
-        <p className="text-red-600 text-sm">{error}</p>
-      </div>
-    );
-  }
+  const handleDelete = async (item: ShortLinkItem) => {
+    setDeletingSlug(item.slug);
+    try {
+      const ok = await deleteShortLink(item.slug);
+      if (ok) {
+        toast.success("Link deleted");
+        onDelete?.();
+      } else {
+        toast.error("Failed to delete link");
+      }
+    } catch {
+      toast.error("Failed to delete link");
+    } finally {
+      setDeletingSlug(null);
+    }
+  };
 
   const items = data ?? [];
+  const totalClicks = items.reduce((sum, i) => sum + i.clickCount, 0);
+  const activeLinks = items.filter(
+    (i) => new Date(i.expiredAt).getTime() > Date.now(),
+  ).length;
+
+  if (loading && !data) {
+    return (
+      <div className="space-y-3">
+        {[...Array(3)].map((_, i) => (
+          <div
+            key={i}
+            className="h-24 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+          <Link2 className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+        </div>
+        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+          No links yet
+        </p>
+        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+          Shorten a URL and it will appear here
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="mt-8 w-full max-w-lg bg-white rounded-3xl shadow-[0_20px_50px_rgba(8,112,184,0.07)] border border-gray-100 p-8 sm:p-10">
-      <h2 className="text-lg font-bold text-gray-800 mb-4">Your links</h2>
-      {items.length === 0 ? (
-        <p className="text-gray-500 text-sm">
-          No short links yet. Shorten a URL above and it will appear here.
-        </p>
-      ) : (
-        <ul className="space-y-4">
-          {items.map((item) => {
-            const shortUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/c/${item.slug}`;
-            const isExpired =
-              new Date(item.expiredAt).getTime() < Date.now();
-            return (
-              <li
-                key={item.id}
-                className="p-4 rounded-2xl bg-gray-50 border border-gray-100 hover:border-gray-200 transition-colors"
-              >
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2 flex-wrap">
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 rounded-xl border border-gray-200/60 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 px-4 py-2.5">
+        <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+          <BarChart3 className="h-3.5 w-3.5" />
+          <span>{totalClicks} total clicks</span>
+        </div>
+        <div className="h-3 w-px bg-gray-200 dark:bg-gray-700" />
+        <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+          <Link2 className="h-3.5 w-3.5" />
+          <span>{activeLinks} active</span>
+        </div>
+        <div className="h-3 w-px bg-gray-200 dark:bg-gray-700" />
+        <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+          <span>{items.length} total</span>
+        </div>
+      </div>
+
+      <ul className="space-y-2">
+        {items.map((item) => {
+          const shortUrl = `/${item.slug}`;
+          const fullUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/c/${item.slug}`;
+          const isExpired =
+            new Date(item.expiredAt).getTime() < Date.now();
+
+          return (
+            <li
+              key={item.id}
+              className="group relative rounded-xl border border-gray-200/60 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 py-3 transition-colors hover:border-gray-300 dark:hover:border-gray-700"
+            >
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
                     <a
-                      href={shortUrl}
+                      href={fullUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="font-semibold text-blue-600 hover:underline break-all text-sm"
+                      className="truncate text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
                     >
                       {shortUrl}
                     </a>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(item)}
-                      className="shrink-0 text-xs px-2 py-1 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 transition-colors"
+                    <a
+                      href={fullUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hidden sm:inline-flex shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                     >
-                      {copiedSlug === item.slug ? "Copied!" : "Copy"}
-                    </button>
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
                   </div>
-                  <p className="text-gray-600 text-sm truncate" title={item.url}>
-                    → {item.url}
+                  <p
+                    className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400"
+                    title={item.url}
+                  >
+                    {item.url}
                   </p>
-                  <div className="flex gap-4 text-xs text-gray-500">
-                    <span>{item.clickCount} clicks</span>
-                    <span>Expires: {formatDate(item.expiredAt)}</span>
+                  <div className="mt-1.5 flex items-center gap-3 text-[11px] text-gray-400 dark:text-gray-500">
+                    <span className="flex items-center gap-1">
+                      <BarChart3 className="h-3 w-3" />
+                      {item.clickCount}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      <span className={isExpired ? "text-red-500 dark:text-red-400" : ""}>
+                        {relativeTime(item.expiredAt)}
+                      </span>
+                    </span>
                     {isExpired && (
-                      <span className="text-amber-600 font-medium">Expired</span>
+                      <span className="rounded-full bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 text-[10px] font-medium text-red-600 dark:text-red-400">
+                        Expired
+                      </span>
                     )}
                   </div>
                 </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+
+                <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-100">
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(item)}
+                    className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-colors"
+                    title="Copy link"
+                  >
+                    {copiedSlug === item.slug ? (
+                      <span className="text-[10px] font-medium text-green-500 px-1">Copied</span>
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(item)}
+                    disabled={deletingSlug === item.slug}
+                    className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition-colors disabled:opacity-50"
+                    title="Delete link"
+                  >
+                    {deletingSlug === item.slug ? (
+                      <svg
+                        className="h-3.5 w-3.5 animate-spin"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 };

@@ -1,4 +1,6 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Link2, Copy, Check, ArrowRight } from "lucide-react";
 import client from "./apis/client";
 import { authClient } from "./lib/auth-client";
 import { QRCodeCanvas } from "qrcode.react";
@@ -9,28 +11,29 @@ function App() {
   const { useSession } = authClient;
   const { data: session } = useSession();
   const [url, setUrl] = useState("");
+  const [slug, setSlug] = useState("");
   const [shortUrl, setShortUrl] = useState("");
   const [expiredAt, setExpiredAt] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
   const [historyRefetchTrigger, setHistoryRefetchTrigger] = useState(0);
-  const qrCodeRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
     setShortUrl("");
     setExpiredAt("");
+    setCopied(false);
 
     try {
-      // Normalize URL by adding https:// if no protocol is provided
       const normalizedUrl = url.match(/^https?:\/\//i) ? url : `https://${url}`;
-      const response = await client.api.url.$post({
-        json: { url: normalizedUrl },
-      });
+      const body: Record<string, string> = { url: normalizedUrl };
+      if (slug.trim()) body.slug = slug.trim();
+
+      const response = await client.api.url.$post({ json: body as any });
       if (!response.ok) {
-        throw new Error("Failed to shorten URL");
+        const errData = await response.json().catch(() => ({}));
+        throw new Error((errData as any)?.error || "Failed to shorten URL");
       }
 
       const data = await response.json();
@@ -38,160 +41,239 @@ function App() {
       setExpiredAt(data.expiredAt);
       setHistoryRefetchTrigger((n) => n + 1);
     } catch (err: any) {
-      setError(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatExpiry = (dateStr: string) => {
-    if (!dateStr) return "";
-    return new Date(dateStr).toLocaleString(undefined, {
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(shortUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy");
+    }
+  };
+
+  const formatExpiry = (dateStr: string) =>
+    new Date(dateStr).toLocaleString(undefined, {
       dateStyle: "medium",
       timeStyle: "short",
     });
-  };
+
+  const isLoggedIn = !!session;
 
   return (
     <>
       <Header />
-      <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-blue-100 via-white to-gray-50 flex flex-col items-center justify-center p-6 sm:p-12">
-        <div className="w-full max-w-lg">
-          <div className="text-center mb-10">
-            <div className="inline-block p-3 rounded-2xl bg-blue-600 shadow-xl shadow-blue-200 mb-6">
-              <svg
-                className="w-8 h-8 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2.5"
-                  d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                ></path>
-              </svg>
-            </div>
-            <h1 className="text-4xl sm:text-5xl font-black text-gray-900 tracking-tight mb-4">
-              Keep It <span className="text-blue-600">Short</span>
-            </h1>
-            <p className="text-lg text-gray-500 max-w-sm mx-auto">
-              Transform your long, messy links into clean, powerful short URLs
-              in seconds.
-            </p>
-          </div>
-
-          {/* Main Card */}
-          <div className="bg-white rounded-3xl shadow-[0_20px_50px_rgba(8,112,184,0.07)] border border-gray-100 p-8 sm:p-10 transition-all hover:shadow-[0_20px_50px_rgba(8,112,184,0.12)]">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <label
-                  htmlFor="url"
-                  className="text-sm font-semibold text-gray-700 ml-1"
-                >
-                  Paste your long URL
-                </label>
-                <input
-                  id="url"
-                  type="text"
-                  placeholder="example.com/very-long-url-here"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  required
-                  className="w-full px-5 py-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none transition-all duration-300 text-gray-900 placeholder:text-gray-400 text-base shadow-sm"
-                />
+      <div className="min-h-[calc(100vh-3.5rem)] bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
+        <div
+          className={
+            isLoggedIn
+              ? "mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_380px] lg:py-12"
+              : "mx-auto flex max-w-xl flex-col items-center justify-center px-4 py-12 sm:px-6 lg:py-20"
+          }
+        >
+          {/* Left column: branding + form + result */}
+          <div className="flex flex-col">
+            {/* Compact branding */}
+            <div className="mb-8 flex items-center gap-3 sm:mb-10">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-200 dark:shadow-blue-900/40">
+                <Link2 className="h-5 w-5 text-white" />
               </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] disabled:bg-blue-300 text-white font-bold rounded-2xl shadow-lg shadow-blue-200 transition-all duration-200 flex items-center justify-center text-lg"
-              >
-                {loading ? (
-                  <>
-                    <svg
-                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Shortening...
-                  </>
-                ) : (
-                  "Shorten Now"
-                )}
-              </button>
-            </form>
-
-            {error && (
-              <div className="mt-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm font-medium text-center animate-shake">
-                {error}
-              </div>
-            )}
-
-            {shortUrl && (
-              <div className="mt-8 pt-8 border-t border-gray-100 animate-in fade-in zoom-in-95 duration-500">
-                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 text-center">
-                  Successfully Shortened
+              <div>
+                <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-2xl">
+                  Keep It <span className="text-blue-600">Short</span>
+                </h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Shorten URLs in seconds
                 </p>
-                <div className="bg-blue-50 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-3">
+              </div>
+            </div>
+
+            {/* Form card */}
+            <div className="rounded-2xl border border-gray-200/60 dark:border-gray-800 bg-white dark:bg-gray-950 p-6 shadow-sm sm:p-8">
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="url"
+                    className="text-sm font-semibold text-gray-700 dark:text-gray-300"
+                  >
+                    Paste your long URL
+                  </label>
                   <input
-                    readOnly
-                    value={shortUrl}
-                    className="flex-1 bg-transparent border-none text-blue-700 font-bold break-all outline-none text-center sm:text-left"
+                    id="url"
+                    type="text"
+                    placeholder="https://example.com/very-long-url-here"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    required
+                    autoFocus
+                    className="w-full rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-3 text-base text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none transition-all focus:border-blue-500 focus:bg-white dark:focus:bg-gray-950 focus:ring-4 focus:ring-blue-500/10"
                   />
                 </div>
 
-                {!!shortUrl && (
-                  <div
-                    ref={qrCodeRef}
-                    className="mt-4 flex flex-col items-center gap-y-2"
+                <div className="space-y-2">
+                  <label
+                    htmlFor="slug"
+                    className="text-sm font-medium text-gray-600 dark:text-gray-400"
                   >
-                    <QRCodeCanvas value={shortUrl} size={128} />
-                  </div>
-                )}
-
-                {expiredAt && (
-                  <p className="mt-4 text-center text-sm text-gray-500">
-                    Link expires on:{" "}
-                    <span className="font-semibold text-gray-700">
-                      {formatExpiry(expiredAt)}
+                    Custom slug{" "}
+                    <span className="text-gray-400 dark:text-gray-500">
+                      (optional)
                     </span>
+                  </label>
+                  <div className="flex rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 transition-all focus-within:border-blue-500 focus-within:bg-white dark:focus-within:bg-gray-950 focus-within:ring-4 focus-within:ring-blue-500/10">
+                    <span className="hidden sm:flex items-center pl-4 text-sm text-gray-400 dark:text-gray-500 select-none">
+                      kis.cc/
+                    </span>
+                    <input
+                      id="slug"
+                      type="text"
+                      placeholder="my-link"
+                      value={slug}
+                      onChange={(e) =>
+                        setSlug(e.target.value.replace(/[^0-9A-Za-z_-]/g, ""))
+                      }
+                      maxLength={16}
+                      className="flex-1 rounded-xl bg-transparent px-4 py-3 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 outline-none"
+                    />
+                  </div>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                    4-16 chars: letters, numbers, hyphens, underscores
                   </p>
-                )}
-
-                <div className="mt-4 text-center">
-                  <a
-                    href={shortUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs text-gray-400 hover:text-blue-500 transition-colors"
-                  >
-                    Visit Link &rarr;
-                  </a>
                 </div>
-              </div>
-            )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="group relative w-full rounded-xl bg-blue-600 px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-blue-200 dark:shadow-blue-900/40 transition-all hover:bg-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-blue-400 dark:disabled:bg-blue-800"
+                >
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg
+                        className="h-5 w-5 animate-spin"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                      Shortening...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      Shorten URL
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                    </span>
+                  )}
+                </button>
+              </form>
+
+              {/* Success result */}
+              {shortUrl && (
+                <div className="mt-8 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                      <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      Link created
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl border-2 border-blue-100 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/30 p-4">
+                    <div className="flex items-center gap-2">
+                      <input
+                        readOnly
+                        value={shortUrl}
+                        className="flex-1 bg-transparent text-sm font-semibold text-blue-700 dark:text-blue-300 outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCopy}
+                        className="flex shrink-0 items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700"
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="h-3 w-3" />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" />
+                            Copy
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="mt-3 flex items-center gap-4">
+                      <div className="flex items-center gap-2 rounded-lg bg-white/60 dark:bg-gray-900/50 p-2.5">
+                        <QRCodeCanvas
+                          value={shortUrl}
+                          size={72}
+                          bgColor="transparent"
+                          fgColor="currentColor"
+                          className="text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+                      <div className="space-y-1 text-xs">
+                        <div className="text-gray-500 dark:text-gray-400">
+                          Expires
+                        </div>
+                        <div className="font-medium text-gray-700 dark:text-gray-300">
+                          {formatExpiry(expiredAt)}
+                        </div>
+                        <a
+                          href={shortUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          Open link <ArrowRight className="h-3 w-3" />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          {session && (
-            <ShortLinkHistory refetchTrigger={historyRefetchTrigger} />
+          {/* Right column: history (logged in only) */}
+          {isLoggedIn && (
+            <div className="lg:sticky lg:top-20 lg:self-start">
+              <div className="rounded-2xl border border-gray-200/60 dark:border-gray-800 bg-white dark:bg-gray-950 p-6 shadow-sm sm:p-8">
+                <div className="mb-5 flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                    Your links
+                  </h2>
+                </div>
+                <div className="max-h-[calc(100vh-16rem)] overflow-y-auto lg:max-h-[calc(100vh-11rem)]">
+                  <ShortLinkHistory
+                    refetchTrigger={historyRefetchTrigger}
+                    onDelete={() =>
+                      setHistoryRefetchTrigger((n) => n + 1)
+                    }
+                  />
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>

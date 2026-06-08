@@ -1,4 +1,6 @@
 import React from "react";
+import { useTheme } from "next-themes";
+import { Sun, Moon, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import UserAuth from "./auth/UserAuth";
 
@@ -7,34 +9,40 @@ interface Props {
 }
 
 const Header: React.FC<Props> = (props) => {
-  return (
-    <div
-      className={cn("px-4 py-2 w-full flex justify-between", props.className)}
-    >
-      {/* logo */}
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-          <svg
-            className="w-5 h-5 text-white"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M13 10V3L4 14h7v7l9-11h-7z"
-            />
-          </svg>
-        </div>
-        <span className="text-xl font-bold text-gray-800">Keep It Short</span>
-      </div>
+  const { theme, setTheme } = useTheme();
 
-      {/* Login button */}
-      <UserAuth className="text-sm text-gray-600" />
-    </div>
+  return (
+    <header
+      className={cn(
+        "sticky top-0 z-50 w-full border-b border-gray-200/60 dark:border-gray-800/60",
+        "bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl",
+        props.className,
+      )}
+    >
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
+            <Link2 className="h-4.5 w-4.5 text-white" />
+          </div>
+          <span className="text-base font-bold tracking-tight text-gray-900 dark:text-gray-100">
+            Keep It Short
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 transition-colors"
+            aria-label="Toggle theme"
+          >
+            <Sun className="h-4 w-4 hidden dark:block" />
+            <Moon className="h-4 w-4 block dark:hidden" />
+          </button>
+          <UserAuth className="text-sm" />
+        </div>
+      </div>
+    </header>
   );
 };
 
