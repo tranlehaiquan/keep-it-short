@@ -1,6 +1,7 @@
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
+import { logger } from "hono/logger";
 import { auth } from "./lib/auth.js"; // path to your auth file
 import "./db/redis-instance.js";
 import shortLink from "./routers/shortLink.js";
@@ -13,6 +14,8 @@ const app = new Hono<{
     session: typeof auth.$Infer.Session.session | null;
   };
 }>();
+
+app.use("*", logger());
 
 // enable CORS for any API route (allow all origins)
 app.use("/api/*", cors({ origin: "http://localhost:5173", credentials: true }));
