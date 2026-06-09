@@ -64,6 +64,6 @@ jobs:
               --name api \
               --restart always \
               --network app_network \
-              -p 3000:3000 \
+              -p 4000:4000 \
               --env-file /home/ubuntu/.env \
               "$IMAGE"

@@ -39,18 +39,18 @@ services:
     networks:
       - internal
     ports:
-      - "${APP_PORT:-3000}:3000"
+      - "${APP_PORT:-4000}:4000"
     expose:
-      - "${APP_PORT:-3000}"
+      - "${APP_PORT:-4000}"
     environment:
       NODE_ENV: production
       DATABASE_URL: postgres://postgres:postgres@db:5432/keep-it-short
       REDIS_URL: redis://default:redis_secure_password@redis:6379
       REDIS_PASSWORD: redis_secure_password
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-xu2tFfmnYYEw}
-      BETTER_AUTH_URL: ${DOMAIN:-http://localhost:3000}
-      BETTER_AUTH_TRUSTED_ORIGINS: ${DOMAIN:-http://localhost:3000}
-      BASE_URL: ${DOMAIN:-http://localhost:3000}
+      BETTER_AUTH_URL: ${DOMAIN:-http://localhost:4000}
+      BETTER_AUTH_TRUSTED_ORIGINS: ${DOMAIN:-http://localhost:4000}
+      BASE_URL: ${DOMAIN:-http://localhost:4000}
       RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-10}
       RATE_LIMIT_WINDOW_SECONDS: ${RATE_LIMIT_WINDOW_SECONDS:-60}
     depends_on:
