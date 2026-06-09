@@ -55,4 +55,4 @@ COPY --from=web-builder /repo/apps/web/dist ./apps/web/dist
 WORKDIR /app/apps/api
 
 EXPOSE 3000
-CMD ["node", "dist/server.js"]
+CMD ["sh", "-c", "node dist/migrate.js && node dist/server.js"]
