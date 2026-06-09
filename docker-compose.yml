@@ -39,7 +39,7 @@ services:
       DATABASE_URL: postgres://postgres:postgres@db:5432/keep-it-short
       REDIS_URL: redis://default:redis_secure_password@redis:6379
       REDIS_PASSWORD: redis_secure_password
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-xu2tFfmnYYEw}
       BETTER_AUTH_URL: ${DOMAIN:-http://localhost:3000}
       BETTER_AUTH_TRUSTED_ORIGINS: ${DOMAIN:-http://localhost:3000}
       BASE_URL: ${DOMAIN:-http://localhost:3000}
