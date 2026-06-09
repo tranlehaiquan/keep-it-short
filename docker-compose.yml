@@ -1,9 +1,3 @@
-# Dev (DB + Redis only):  docker compose up -d
-# Full stack (API + web):   docker compose up -d --build
-#
-# After first start, run migrations from the host:
-#   DATABASE_URL=postgres://postgres:postgres@localhost:5433/keep-it-short pnpm db:migrate
-
 services:
   db:
     image: postgres:16-alpine
@@ -11,10 +5,8 @@ services:
       POSTGRES_DB: keep-it-short
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    networks:
-      - app-network
-    ports:
-      - "5433:5432"
+    expose:
+      - "5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -26,10 +18,8 @@ services:
   redis:
     image: redis:7-alpine
     command: redis-server --requirepass redis_secure_password
-    networks:
-      - app-network
-    ports:
-      - "6379:6379"
+    expose:
+      - "6379"
     volumes:
       - redisdata:/data
     healthcheck:
@@ -44,13 +34,11 @@ services:
       dockerfile: Dockerfile
     ports:
       - "${APP_PORT:-3000}:3000"
-    networks:
-      - app-network
     environment:
       NODE_ENV: production
       DATABASE_URL: postgres://postgres:postgres@db:5432/keep-it-short
-      REDIS_PASSWORD: redis_secure_password
       REDIS_URL: redis://:redis_secure_password@redis:6379
+      REDIS_PASSWORD: redis_secure_password
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: ${DOMAIN:-http://localhost:3000}
       BETTER_AUTH_TRUSTED_ORIGINS: ${DOMAIN:-http://localhost:3000}
@@ -66,7 +54,3 @@ services:
 volumes:
   pgdata:
   redisdata:
-
-networks:
-  app-network:
-    driver: bridge
