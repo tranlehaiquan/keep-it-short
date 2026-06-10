@@ -54,7 +54,7 @@ const app = new Hono().get("/:slug{[0-9A-Za-z_-]{4,16}}", async (c) => {
     referer: c.req.header("referer") ?? null,
   };
 
-  Promise.all([
+  await Promise.all([
     db
       .update(shortLinkTable)
       .set({ clickCount: sql`${shortLinkTable.clickCount} + 1` })
