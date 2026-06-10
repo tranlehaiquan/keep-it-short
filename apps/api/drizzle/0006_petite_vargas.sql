@@ -1,0 +1,1 @@
+CREATE INDEX "short_links_created_by_idx" ON "short_links" USING btree ("created_by");

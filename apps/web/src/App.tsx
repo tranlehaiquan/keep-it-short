@@ -15,6 +15,9 @@ function App() {
   const [slug, setSlug] = useState("");
   const [shortUrl, setShortUrl] = useState("");
   const [expiredAt, setExpiredAt] = useState("");
+  const [ogTitle, setOgTitle] = useState<string | null>(null);
+  const [ogDescription, setOgDescription] = useState<string | null>(null);
+  const [ogImage, setOgImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [historyRefetchTrigger, setHistoryRefetchTrigger] = useState(0);
@@ -36,6 +39,9 @@ function App() {
     setLoading(true);
     setShortUrl("");
     setExpiredAt("");
+    setOgTitle(null);
+    setOgDescription(null);
+    setOgImage(null);
     setCopied(false);
 
     try {
@@ -54,6 +60,9 @@ function App() {
       const data = await response.json();
       setShortUrl(data.shortUrl);
       setExpiredAt(data.expiredAt);
+      setOgTitle(data.ogTitle ?? null);
+      setOgDescription(data.ogDescription ?? null);
+      setOgImage(data.ogImage ?? null);
       setHistoryRefetchTrigger((n) => n + 1);
     } catch (err: unknown) {
       const message =
@@ -266,6 +275,35 @@ function App() {
                         </a>
                       </div>
                     </div>
+
+                    {(ogTitle || ogDescription || ogImage) && (
+                      <div className="mt-3 rounded-lg border border-gray-200/60 dark:border-gray-800 bg-white/60 dark:bg-gray-950/50 p-3">
+                        <div className="flex items-start gap-3">
+                          {ogImage && (
+                            <img
+                              src={ogImage}
+                              alt=""
+                              className="h-14 w-20 shrink-0 rounded-md object-cover bg-gray-100 dark:bg-gray-800"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = "none";
+                              }}
+                            />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            {ogTitle && (
+                              <p className="truncate text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                {ogTitle}
+                              </p>
+                            )}
+                            {ogDescription && (
+                              <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2">
+                                {ogDescription}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

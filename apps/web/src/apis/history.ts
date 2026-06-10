@@ -6,17 +6,25 @@ export interface ShortLinkItem {
   createdAt: string | null;
   expiredAt: string;
   createdBy: string | null;
+  ogTitle: string | null;
+  ogDescription: string | null;
+  ogImage: string | null;
 }
 
 export interface HistoryResponse {
   items: ShortLinkItem[];
+  total: number;
+  hasMore: boolean;
 }
 
 const getApiBase = () =>
   import.meta.env.DEV ? "" : (typeof window !== "undefined" ? window.location.origin : "");
 
-export async function fetchShortLinkHistory(): Promise<HistoryResponse | null> {
-  const res = await fetch(`${getApiBase()}/api/url/history`, {
+export async function fetchShortLinkHistory(
+  limit = 20,
+  offset = 0,
+): Promise<HistoryResponse | null> {
+  const res = await fetch(`${getApiBase()}/api/url/history?limit=${limit}&offset=${offset}`, {
     credentials: "include",
   });
   if (!res.ok) {

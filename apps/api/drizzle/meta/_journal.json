@@ -36,6 +36,20 @@
       "when": 1771930920000,
       "tag": "0004_giant_maverick",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781108591134,
+      "tag": "0005_classy_shaman",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1781109211463,
+      "tag": "0006_petite_vargas",
+      "breakpoints": true
     }
   ]
 }
