@@ -23,6 +23,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url, token }) => {
+      if (process.env.NODE_ENV !== "development") return;
       console.log("Password reset requested:");
       console.log("  User:", user.email);
       console.log("  Reset URL:", url);
