@@ -1,8 +1,9 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import * as z from "zod";
+import * as dns from "node:dns/promises";
 import { nanoid } from "nanoid";
-import { desc, eq, and, gte } from "drizzle-orm";
+import { desc, eq, and, gte, sql } from "drizzle-orm";
 import db from "../db/index.js";
 import { shortLinkTable } from "../db/schema/short-link.js";
 import { clickEventTable } from "../db/schema/click-event.js";
@@ -76,11 +77,28 @@ const app = new Hono<{
         await redis.set(slug, JSON.stringify(record), { EX: ttlSeconds });
       }
 
+      scrapeOpenGraph(url).then((ogData) => {
+        if (!ogData) return;
+        Promise.all([
+          db
+            .update(shortLinkTable)
+            .set(ogData)
+            .where(eq(shortLinkTable.slug, slug))
+            .execute(),
+          ttlSeconds > 0
+            ? redis.set(slug, JSON.stringify({ ...record, ...ogData }), { EX: ttlSeconds })
+            : Promise.resolve(),
+        ]).catch((err) => console.error("OG update error:", err));
+      }).catch((err) => console.error("OG scrape error:", err));
+
       return c.json(
         {
           slug: record.slug,
           shortUrl: `${process.env.BASE_URL ?? new URL(c.req.url).origin}/c/${record.slug}`,
           expiredAt: record.expiredAt,
+          ogTitle: null,
+          ogDescription: null,
+          ogImage: null,
         },
         201,
       );
@@ -96,13 +114,27 @@ const app = new Hono<{
       return c.json({ error: "Unauthorized" }, 401);
     }
 
-    const history = await db
-      .select()
-      .from(shortLinkTable)
-      .where(eq(shortLinkTable.createdBy, user.id))
-      .orderBy(desc(shortLinkTable.createdAt));
+    const limit = Math.min(Math.max(parseInt(c.req.query("limit") ?? "20", 10) || 20, 1), 100);
+    const offset = Math.max(parseInt(c.req.query("offset") ?? "0", 10) || 0, 0);
 
-    return c.json({ items: history });
+    const [history, [{ count }]] = await Promise.all([
+      db
+        .select()
+        .from(shortLinkTable)
+        .where(eq(shortLinkTable.createdBy, user.id))
+        .orderBy(desc(shortLinkTable.createdAt))
+        .limit(limit)
+        .offset(offset),
+      db
+        .select({ count: sql<number>`cast(count(*) as integer)` })
+        .from(shortLinkTable)
+        .where(eq(shortLinkTable.createdBy, user.id)),
+    ]);
+
+    const total = Number(count);
+    const hasMore = offset + limit < total;
+
+    return c.json({ items: history, total, hasMore });
   })
   .delete("/url/:slug", async (c) => {
     const user = c.get("user");
@@ -256,6 +288,82 @@ function parseOS(ua: string): string {
   if (/Android/.test(ua)) return "Android";
   if (/iP(hone|ad|od)/.test(ua)) return "iOS";
   return "Other";
+}
+
+async function scrapeOpenGraph(
+  url: string,
+): Promise<{ ogTitle: string | null; ogDescription: string | null; ogImage: string | null } | null> {
+  try {
+    const parsedUrl = new URL(url);
+    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") return null;
+
+    const { address } = await dns.lookup(parsedUrl.hostname, { family: 4 });
+    if (isPrivateIp(address)) return null;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "kis-bot/1.0 (OpenGraph fetcher)",
+        Accept: "text/html",
+      },
+      redirect: "follow",
+    });
+    clearTimeout(timeout);
+
+    if (!res.ok) return null;
+
+    const ct = res.headers.get("content-type") ?? "";
+    if (!ct.includes("text/html")) return null;
+
+    const contentLength = parseInt(res.headers.get("content-length") ?? "0", 10);
+    if (contentLength > 5 * 1024 * 1024) return null;
+
+    const html = await res.text();
+    if (html.length > 5 * 1024 * 1024) return null;
+
+    const getMeta = (property: string) => {
+      const regex = new RegExp(
+        `<meta[^>]+property=["']${property}["'][^>]+content=["']([^"']*)["']`,
+        "i",
+      );
+      const match = html.match(regex);
+      if (match) return match[1];
+      const regex2 = new RegExp(
+        `<meta[^>]+content=["']([^"']*)["'][^>]+property=["']${property}["']`,
+        "i",
+      );
+      const match2 = html.match(regex2);
+      return match2?.[1] ?? null;
+    };
+
+    const ogTitle = getMeta("og:title");
+    const ogDescription = getMeta("og:description");
+    const ogImage = getMeta("og:image");
+
+    if (!ogTitle && !ogDescription && !ogImage) return null;
+
+    return {
+      ogTitle: ogTitle?.slice(0, 512) ?? null,
+      ogDescription: ogDescription?.slice(0, 1024) ?? null,
+      ogImage: ogImage?.slice(0, 2048) ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function isPrivateIp(ip: string): boolean {
+  const parts = ip.split(".").map(Number);
+  if (parts.length !== 4) return false;
+  if (parts[0] === 127) return true;
+  if (parts[0] === 10) return true;
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+  if (parts[0] === 192 && parts[1] === 168) return true;
+  if (parts[0] === 169 && parts[1] === 254) return true;
+  return false;
 }
 
 export default app;

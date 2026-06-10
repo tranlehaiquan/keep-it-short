@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { Trash2, Copy, ExternalLink, BarChart3, Clock, Link2, Pencil } from "lucide-react";
 import {
@@ -37,32 +37,62 @@ const ShortLinkHistory: React.FC<Props> = ({
   refetchTrigger = 0,
   onDelete,
 }) => {
-  const [data, setData] = useState<ShortLinkItem[] | null>(null);
+  const [items, setItems] = useState<ShortLinkItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const genRef = useRef(0);
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
   const [deletingSlug, setDeletingSlug] = useState<string | null>(null);
   const [statsSlug, setStatsSlug] = useState<string | null>(null);
   const [editingLink, setEditingLink] = useState<ShortLinkItem | null>(null);
 
-  const load = React.useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (reset = false) => {
+    const gen = ++genRef.current;
+    const currentOffset = reset ? 0 : offset;
+    if (reset) {
+      setLoading(true);
+      setOffset(0);
+    } else {
+      setLoadingMore(true);
+    }
     try {
-      const res = await fetchShortLinkHistory();
-      setData(res?.items ?? []);
+      const res = await fetchShortLinkHistory(20, currentOffset);
+      if (gen !== genRef.current) return;
+      if (res) {
+        if (reset) {
+          setItems(res.items);
+          setOffset(res.items.length);
+        } else {
+          setItems((prev) => [...prev, ...res.items]);
+          setOffset((prev) => prev + res.items.length);
+        }
+        setTotal(res.total);
+        setHasMore(res.hasMore);
+      } else {
+        setItems([]);
+        setTotal(0);
+        setHasMore(false);
+      }
     } catch (e) {
+      if (gen !== genRef.current) return;
       toast.error(
         e instanceof Error ? e.message : "Failed to load history",
       );
-      setData([]);
     } finally {
-      setLoading(false);
+      if (gen === genRef.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
-  }, []);
+  }, [offset]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    load();
-  }, [load, refetchTrigger]);
+    load(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refetchTrigger]);
 
   const handleCopy = async (item: ShortLinkItem) => {
     const fullUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/c/${item.slug}`;
@@ -81,8 +111,9 @@ const ShortLinkHistory: React.FC<Props> = ({
     try {
       const ok = await deleteShortLink(item.slug);
       if (ok) {
+        setItems((prev) => prev.filter((i) => i.id !== item.id));
+        setTotal((prev) => prev - 1);
         toast.success("Link deleted");
-        onDelete?.();
       } else {
         toast.error("Failed to delete link");
       }
@@ -93,7 +124,6 @@ const ShortLinkHistory: React.FC<Props> = ({
     }
   };
 
-  const items = data ?? [];
   const totalClicks = items.reduce((sum, i) => sum + i.clickCount, 0);
   /* eslint-disable react-hooks/purity */
   const activeLinks = items.filter(
@@ -101,7 +131,7 @@ const ShortLinkHistory: React.FC<Props> = ({
   ).length;
   /* eslint-enable react-hooks/purity */
 
-  if (loading && !data) {
+  if (loading && items.length === 0) {
     return (
       <div className="space-y-3">
         {[...Array(3)].map((_, i) => (
@@ -144,7 +174,7 @@ const ShortLinkHistory: React.FC<Props> = ({
         </div>
         <div className="h-3 w-px bg-gray-200 dark:bg-gray-700" />
         <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-          <span>{items.length} total</span>
+          <span>{total} total</span>
         </div>
       </div>
 
@@ -163,6 +193,16 @@ const ShortLinkHistory: React.FC<Props> = ({
               className="group relative rounded-xl border border-gray-200/60 dark:border-gray-800 bg-white dark:bg-gray-950 px-4 py-3 transition-colors hover:border-gray-300 dark:hover:border-gray-700"
             >
               <div className="flex items-start gap-3">
+                {item.ogImage ? (
+                  <img
+                    src={item.ogImage}
+                    alt=""
+                    className="hidden sm:block h-16 w-24 shrink-0 rounded-lg object-cover bg-gray-100 dark:bg-gray-800"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                ) : null}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <a
@@ -182,6 +222,16 @@ const ShortLinkHistory: React.FC<Props> = ({
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
+                  {item.ogTitle && (
+                    <p className="mt-0.5 truncate text-xs font-medium text-gray-700 dark:text-gray-300">
+                      {item.ogTitle}
+                    </p>
+                  )}
+                  {item.ogDescription && (
+                    <p className="mt-0.5 truncate text-[11px] text-gray-500 dark:text-gray-400">
+                      {item.ogDescription}
+                    </p>
+                  )}
                   <p
                     className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400"
                     title={item.url}
@@ -274,6 +324,43 @@ const ShortLinkHistory: React.FC<Props> = ({
           );
         })}
       </ul>
+
+      {hasMore && (
+        <button
+          type="button"
+          onClick={() => load(false)}
+          disabled={loadingMore}
+          className="w-full rounded-xl border border-gray-200/60 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+        >
+          {loadingMore ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg
+                className="h-4 w-4 animate-spin"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+              Loading...
+            </span>
+          ) : (
+            `Show more (${total - items.length} remaining)`
+          )}
+        </button>
+      )}
 
       <StatsDialog
         open={!!statsSlug}
