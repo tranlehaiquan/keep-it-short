@@ -90,6 +90,7 @@ const ShortLinkHistory: React.FC<Props> = ({
   }, [offset]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refetchTrigger]);
