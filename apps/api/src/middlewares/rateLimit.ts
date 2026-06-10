@@ -43,7 +43,11 @@ export async function rateLimit(c: Context, next: Next) {
       );
     }
   } catch (err) {
-    console.warn("[rate-limit] Redis unavailable, skipping rate limit:", err);
+    console.error("[rate-limit] Redis unavailable, rejecting request:", err);
+    return c.json(
+      { error: "Service temporarily unavailable. Please try again later." },
+      503,
+    );
   }
 
   await next();
