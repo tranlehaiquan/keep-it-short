@@ -7,8 +7,6 @@ services:
       POSTGRES_DB: keep-it-short
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    expose:
-      - "5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -22,8 +20,6 @@ services:
     networks:
       - internal
     command: redis-server --requirepass redis_secure_password
-    expose:
-      - "6379"
     volumes:
       - redisdata:/data
     healthcheck:
@@ -39,10 +35,6 @@ services:
     networks:
       - internal
       - dokploy-network
-    ports:
-      - "${APP_PORT:-4000}:4000"
-    expose:
-      - "${APP_PORT:-4000}"
     environment:
       NODE_ENV: production
       DATABASE_URL: postgres://postgres:postgres@db:5432/keep-it-short
@@ -62,8 +54,6 @@ services:
 
 networks:
   internal:
-  dokploy-network:
-    external: true
 
 volumes:
   pgdata:
