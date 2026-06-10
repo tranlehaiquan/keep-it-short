@@ -5,7 +5,7 @@ import { shortLinkTable, type ShortLink } from "../db/schema/short-link.js";
 import { clickEventTable } from "../db/schema/click-event.js";
 import redis from "../db/redis-instance.js";
 
-const app = new Hono().get("/:slug{[0-9A-Za-z_-]{6}}", async (c) => {
+const app = new Hono().get("/:slug{[0-9A-Za-z_-]{4,16}}", async (c) => {
   const slug = c.req.param("slug");
 
   const cached = await redis.get(slug);
@@ -54,7 +54,7 @@ const app = new Hono().get("/:slug{[0-9A-Za-z_-]{6}}", async (c) => {
     referer: c.req.header("referer") ?? null,
   };
 
-  Promise.all([
+  await Promise.all([
     db
       .update(shortLinkTable)
       .set({ clickCount: sql`${shortLinkTable.clickCount} + 1` })

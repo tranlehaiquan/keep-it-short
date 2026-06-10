@@ -12,6 +12,7 @@
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
     "db:migrate:prod": "node dist/migrate.js",
+    "lint": "eslint .",
     "test": "vitest"
   },
   "dependencies": {
@@ -25,12 +26,16 @@
     "redis": "^5.12.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@types/node": "^20.19.42",
     "@types/pg": "^8.20.0",
     "@vitest/coverage-v8": "^4.1.8",
     "drizzle-kit": "^0.31.10",
+    "eslint": "^9.39.4",
+    "globals": "^16.5.0",
     "tsx": "^4.22.4",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.60.1",
     "vitest": "^4.1.8"
   }
 }

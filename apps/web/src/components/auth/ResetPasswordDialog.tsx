@@ -37,7 +37,7 @@ const resolver: Resolver<FormValues> = async (values) => {
 };
 
 const getApiBase = () =>
-  import.meta.env.DEV ? "http://localhost:3000" : window.location.origin;
+  import.meta.env.DEV ? "http://localhost:4000" : window.location.origin;
 
 interface Props {
   open: boolean;

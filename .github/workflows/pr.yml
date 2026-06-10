@@ -16,6 +16,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter web lint
+      - run: pnpm --filter api lint
       - run: pnpm --filter api exec tsc --noEmit
       - run: pnpm --filter web exec tsc -b --noEmit
       - run: pnpm --filter api exec vitest --passWithNoTests
